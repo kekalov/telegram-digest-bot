@@ -4,6 +4,8 @@ import json
 import time
 import asyncio
 import requests
+import schedule
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from collections import defaultdict
@@ -754,6 +756,43 @@ async def create_digest() -> str:
     
     return digest_text
 
+# Глобальная переменная для приложения
+application_global = None
+
+async def send_scheduled_digest():
+    """Отправляет автоматическую сводку в 19:00"""
+    if not application_global:
+        logger.error("Приложение не инициализировано")
+        return
+    
+    try:
+        # Собираем свежие сообщения
+        await collect_real_messages()
+        
+        # Создаем сводку
+        digest_text = create_digest()
+        
+        # Отправляем всем пользователям (или конкретному пользователю)
+        if ADMIN_USER_ID:
+            await application_global.bot.send_message(
+                chat_id=ADMIN_USER_ID,
+                text=f"🌅 **ЕЖЕДНЕВНАЯ СВОДКА В 19:00**\n\n{digest_text}"
+            )
+            logger.info(f"Автоматическая сводка отправлена пользователю {ADMIN_USER_ID}")
+        else:
+            logger.warning("ADMIN_USER_ID не настроен, автоматическая сводка не отправлена")
+            
+    except Exception as e:
+        logger.error(f"Ошибка при отправке автоматической сводки: {e}")
+
+def run_scheduler():
+    """Запускает планировщик задач"""
+    schedule.every().day.at("19:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(60)  # Проверяем каждую минуту
+
 def main():
     """Основная функция"""
     if not TELEGRAM_BOT_TOKEN:
@@ -762,6 +801,10 @@ def main():
     
     # Создаем приложение
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # Сохраняем глобальную ссылку на приложение
+    global application_global
+    application_global = application
     
     # Добавляем обработчики команд
     application.add_handler(CommandHandler("start", start))
@@ -775,6 +818,11 @@ def main():
     
     # Обработчик callback'ов для кнопок (только для manage_channels)
     application.add_handler(CallbackQueryHandler(handle_callback))
+    
+    # Запускаем планировщик в отдельном потоке
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    logger.info("Планировщик автоматических сводок запущен (19:00 каждый день)")
     
     # Запускаем бота с обработкой ошибок
     logger.info("Бот запущен")
