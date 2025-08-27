@@ -297,11 +297,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Доступные команды:
 • /digest - получить сводку сейчас
-• /manage_channels - управление каналами для анализа
+• /manage_channels - управление каналами
 • /add_channel @username - добавить канал по username
 • /collect_messages - собрать свежие сообщения из каналов
-• /status - показать статус бота
-• /list_channels - список отслеживаемых каналов
 • /help - справка
 
 Как использовать:
@@ -311,7 +309,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4. Используйте /collect_messages для сбора свежих сообщений
 5. Получайте сводки командой /digest
 
-Примечание: Бот собирает сообщения через веб-интерфейс Telegram.
+Примечание: Бот собирает сообщения через веб-интерфейс Telegram. Формирует сводку 5 раз в день каждые 3 часа (9:00 - 21:00)
     """
     
     await update.message.reply_text(welcome_text)
@@ -324,11 +322,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 **Основные команды:**
 • `/start` - начать работу с ботом
 • `/digest` - получить сводку сейчас
-• `/manage_channels` - управление каналами для анализа
+• `/manage_channels` - управление каналами
 • `/add_channel @username` - добавить канал по username
 • `/collect_messages` - собрать свежие сообщения из каналов
-• `/status` - показать статус бота
-• `/list_channels` - список отслеживаемых каналов
 
 **Как добавить канал:**
 1. Используйте `/manage_channels` для выбора предустановленных каналов
@@ -338,7 +334,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 5. Получайте сводки командой `/digest`
 
 **Сбор сообщений:**
-Бот собирает сообщения через веб-интерфейс Telegram каналов
+Бот собирает сообщения через веб-интерфейс Telegram каналов. Формирует сводку 5 раз в день каждые 3 часа (9:00 - 21:00)
     """
     
     await update.message.reply_text(help_text, parse_mode='Markdown')
