@@ -770,7 +770,7 @@ async def send_scheduled_digest():
         await collect_real_messages()
         
         # Создаем сводку
-        digest_text = create_digest()
+        digest_text = await create_digest()
         
         # Отправляем всем пользователям (или конкретному пользователю)
         if ADMIN_USER_ID:
@@ -796,7 +796,7 @@ async def send_test_digest():
         await collect_real_messages()
         
         # Создаем сводку
-        digest_text = create_digest()
+        digest_text = await create_digest()
         
         # Отправляем тестовую сводку
         if ADMIN_USER_ID:
