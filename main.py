@@ -776,11 +776,40 @@ async def send_scheduled_digest():
         if ADMIN_USER_ID:
             await application_global.bot.send_message(
                 chat_id=ADMIN_USER_ID,
-                text=f"🌅 **ЕЖЕДНЕВНАЯ СВОДКА В 19:00**\n\n{digest_text}"
+                text=f"🌅 **ЕЖЕДНЕВНАЯ СВОДКА**\n\n{digest_text}"
             )
             logger.info(f"Автоматическая сводка отправлена пользователю {ADMIN_USER_ID}")
         else:
             logger.warning("ADMIN_USER_ID не настроен, автоматическая сводка не отправлена")
+            
+    except Exception as e:
+        logger.error(f"Ошибка при отправке автоматической сводки: {e}")
+
+async def send_test_digest():
+    """Отправляет тестовую сводку"""
+    if not application_global:
+        logger.error("Приложение не инициализировано")
+        return
+    
+    try:
+        # Собираем свежие сообщения
+        await collect_real_messages()
+        
+        # Создаем сводку
+        digest_text = create_digest()
+        
+        # Отправляем тестовую сводку
+        if ADMIN_USER_ID:
+            await application_global.bot.send_message(
+                chat_id=ADMIN_USER_ID,
+                text=f"🧪 **ТЕСТОВАЯ СВОДКА** (проверка работы)\n\n{digest_text}"
+            )
+            logger.info(f"Тестовая сводка отправлена пользователю {ADMIN_USER_ID}")
+        else:
+            logger.warning("ADMIN_USER_ID не настроен, тестовая сводка не отправлена")
+            
+    except Exception as e:
+        logger.error(f"Ошибка при отправке тестовой сводки: {e}")
             
     except Exception as e:
         logger.error(f"Ошибка при отправке автоматической сводки: {e}")
@@ -793,6 +822,9 @@ def run_scheduler():
     schedule.every().day.at("15:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("18:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("21:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    
+    # Тестовая сводка через 2 минуты после запуска
+    schedule.every(2).minutes.do(lambda: asyncio.run(send_test_digest()))
     
     while True:
         schedule.run_pending()
