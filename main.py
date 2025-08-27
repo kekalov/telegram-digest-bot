@@ -823,8 +823,8 @@ def run_scheduler():
     schedule.every().day.at("18:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("21:00").do(lambda: asyncio.run(send_scheduled_digest()))
     
-    # Тестовая сводка через 2 минуты после запуска
-    schedule.every(2).minutes.do(lambda: asyncio.run(send_test_digest()))
+    # Тестовая сводка через 2 минуты после запуска (только для проверки)
+    # schedule.every(2).minutes.do(lambda: asyncio.run(send_test_digest()))
     
     while True:
         schedule.run_pending()
