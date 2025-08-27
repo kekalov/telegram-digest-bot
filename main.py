@@ -787,7 +787,12 @@ async def send_scheduled_digest():
 
 def run_scheduler():
     """Запускает планировщик задач"""
-    schedule.every().day.at("19:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    # Сводки каждые 3 часа с 9:00 до 21:00
+    schedule.every().day.at("09:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("12:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("15:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("18:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("21:00").do(lambda: asyncio.run(send_scheduled_digest()))
     
     while True:
         schedule.run_pending()
@@ -822,7 +827,7 @@ def main():
     # Запускаем планировщик в отдельном потоке
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    logger.info("Планировщик автоматических сводок запущен (19:00 каждый день)")
+    logger.info("Планировщик автоматических сводок запущен (9:00, 12:00, 15:00, 18:00, 21:00 каждый день)")
     
     # Запускаем бота с обработкой ошибок
     logger.info("Бот запущен")
