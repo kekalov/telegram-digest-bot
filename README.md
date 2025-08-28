@@ -34,6 +34,7 @@
 - `TELEGRAM_BOT_TOKEN` - токен вашего бота от @BotFather
 - `OPENAI_API_KEY` - ключ OpenAI API (опционально)
 - `ADMIN_USER_ID` - ID администратора (опционально)
+- `DIGEST_CHANNEL_ID` - ID канала для публикации дайджестов (например: @your_channel)
 
 ### 3. Настройка команд бота
 

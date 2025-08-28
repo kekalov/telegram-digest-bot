@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ADMIN_USER_ID = int(os.getenv('ADMIN_USER_ID', 0))
+DIGEST_CHANNEL_ID = os.getenv('DIGEST_CHANNEL_ID', '')  # ID канала для публикации дайджестов
 
 # Настройка часового пояса для Португалии
 # Португалия: WET (UTC+0) зимой, WEST (UTC+1) летом
@@ -622,6 +623,13 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_text += f"Каждые 2 часа: 7:00, 9:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00\n"
     status_text += f"(по португальскому времени)\n\n"
     
+    # Информация о канале
+    if DIGEST_CHANNEL_ID:
+        status_text += f"📢 **Канал для публикации:** {DIGEST_CHANNEL_ID}\n"
+    else:
+        status_text += f"📢 **Канал для публикации:** не настроен\n"
+    status_text += f"\n"
+    
     if monitored_channels:
         status_text += f"✅ **Отслеживаемые каналы:**\n"
         for i, channel in enumerate(monitored_channels, 1):
@@ -671,7 +679,21 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         digest_text = await create_digest()
         if digest_text:
-            await update.message.reply_text(digest_text)
+            # Отправляем в канал (если настроен)
+            if DIGEST_CHANNEL_ID:
+                try:
+                    await application_global.bot.send_message(
+                        chat_id=DIGEST_CHANNEL_ID,
+                        text=f"📰 **СВОДКА ПО ЗАПРОСУ**\n\n{digest_text}",
+                        parse_mode='Markdown'
+                    )
+                    await update.message.reply_text(f"✅ Сводка отправлена в канал {DIGEST_CHANNEL_ID}")
+                except Exception as e:
+                    logger.error(f"Ошибка отправки в канал {DIGEST_CHANNEL_ID}: {e}")
+                    await update.message.reply_text(f"❌ Ошибка отправки в канал: {str(e)}")
+            else:
+                # Если канал не настроен, отправляем лично
+                await update.message.reply_text(digest_text)
         else:
             await update.message.reply_text("📭 Нет новых сообщений для создания сводки")
     except Exception as e:
@@ -817,7 +839,19 @@ async def send_scheduled_digest():
         # Создаем сводку
         digest_text = await create_digest()
         
-        # Отправляем всем пользователям (или конкретному пользователю)
+        # Отправляем дайджест в канал (если настроен)
+        if DIGEST_CHANNEL_ID:
+            try:
+                await application_global.bot.send_message(
+                    chat_id=DIGEST_CHANNEL_ID,
+                    text=f"🌅 **ЕЖЕДНЕВНАЯ СВОДКА**\n\n{digest_text}",
+                    parse_mode='Markdown'
+                )
+                logger.info(f"Автоматическая сводка отправлена в канал {DIGEST_CHANNEL_ID}")
+            except Exception as e:
+                logger.error(f"Ошибка отправки в канал {DIGEST_CHANNEL_ID}: {e}")
+        
+        # Отправляем лично администратору (если настроен)
         if ADMIN_USER_ID:
             await application_global.bot.send_message(
                 chat_id=ADMIN_USER_ID,
