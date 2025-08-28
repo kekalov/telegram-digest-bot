@@ -56,7 +56,7 @@ help - Справка
 
 1. Render автоматически обнаружит `render.yaml` и настроит сервис
 2. Build Command: `pip install -r requirements.txt`
-3. Start Command: `python bot_final.py`
+3. Start Command: `python main.py`
 
 ## Локальная разработка
 
@@ -74,7 +74,7 @@ ADMIN_USER_ID=your_user_id
 
 3. Запустите бота:
 ```bash
-python bot_final.py
+python main.py
 ```
 
 ## Особенности
