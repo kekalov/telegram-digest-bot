@@ -6,7 +6,7 @@ import asyncio
 import requests
 import schedule
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 from collections import defaultdict
 import re
@@ -31,6 +31,10 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ADMIN_USER_ID = int(os.getenv('ADMIN_USER_ID', 0))
 
+# Настройка часового пояса для Португалии
+# Португалия: WET (UTC+0) зимой, WEST (UTC+1) летом
+PORTUGAL_TIMEZONE = timezone(timedelta(hours=1))  # Используем UTC+1 как основной
+
 # Инициализация OpenAI
 openai.api_key = OPENAI_API_KEY
 
@@ -48,7 +52,9 @@ class MessageStore:
     
     def get_messages_for_period(self, hours: int = 24) -> Dict[str, List[dict]]:
         """Получает сообщения за указанный период"""
-        cutoff_time = datetime.now() - timedelta(hours=hours)
+        # Используем португальское время
+        now = datetime.now(PORTUGAL_TIMEZONE)
+        cutoff_time = now - timedelta(hours=hours)
         filtered_messages = {}
         
         for channel_id, messages in self.messages.items():
@@ -61,7 +67,8 @@ class MessageStore:
                         if msg_time.tzinfo is not None:
                             msg_time = msg_time.replace(tzinfo=None)
                         
-                        if msg_time > cutoff_time:
+                        # Конвертируем в португальское время для сравнения
+                        if msg_time > cutoff_time.replace(tzinfo=None):
                             recent_messages.append(msg)
                     except (ValueError, TypeError) as e:
                         logger.warning(f"Ошибка парсинга времени для сообщения: {e}")
@@ -225,7 +232,7 @@ async def scrape_channel_messages(channel_username: str) -> List[dict]:
         for i in range(max_messages):
             if i < len(message_matches):
                 message_text = message_matches[i]
-                message_time = time_matches[i] if i < len(time_matches) else datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+                message_time = time_matches[i] if i < len(time_matches) else datetime.now(PORTUGAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S')
                 
                 # Очищаем HTML теги
                 clean_text = re.sub(r'<[^>]+>', '', message_text)
@@ -256,7 +263,7 @@ async def scrape_channel_messages(channel_username: str) -> List[dict]:
             messages.append({
                 'text': f'Тестовое сообщение из канала {channel_username}: Важные новости дня',
                 'from_user': 'Channel',
-                'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+                'timestamp': datetime.now(PORTUGAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S'),
                 'message_id': 1
             })
         
@@ -268,7 +275,7 @@ async def scrape_channel_messages(channel_username: str) -> List[dict]:
         return [{
             'text': f'Тестовое сообщение из канала {channel_username}: Важные новости дня',
             'from_user': 'Channel',
-            'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+            'timestamp': datetime.now(PORTUGAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S'),
             'message_id': 1
         }]
 
@@ -309,7 +316,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 4. Используйте /collect_messages для сбора свежих сообщений
 5. Получайте сводки командой /digest
 
-Примечание: Бот собирает сообщения через веб-интерфейс Telegram. Формирует сводку 5 раз в день каждые 3 часа (9:00 - 21:00)
+Примечание: Бот собирает сообщения через веб-интерфейс Telegram. Формирует сводку 8 раз в день каждые 2 часа (7:00 - 21:00) по португальскому времени
     """
     
     await update.message.reply_text(welcome_text)
@@ -334,7 +341,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 5. Получайте сводки командой `/digest`
 
 **Сбор сообщений:**
-Бот собирает сообщения через веб-интерфейс Telegram каналов. Формирует сводку 5 раз в день каждые 3 часа (9:00 - 21:00)
+Бот собирает сообщения через веб-интерфейс Telegram каналов. Формирует сводку 8 раз в день каждые 2 часа (7:00 - 21:00) по португальскому времени
     """
     
     await update.message.reply_text(help_text, parse_mode='Markdown')
@@ -678,7 +685,7 @@ async def create_digest() -> str:
     
     # Создаем неформальную сводку "что происходит в мире"
     digest_text = "🌍 ЧТО ПРОИСХОДИТ В МИРЕ\n"
-    digest_text += f"📅 {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
+    digest_text += f"📅 {datetime.now(PORTUGAL_TIMEZONE).strftime('%d.%m.%Y %H:%M')}\n\n"
     
     # Собираем все тексты сообщений
     all_texts = []
@@ -748,7 +755,7 @@ async def create_digest() -> str:
     digest_text += f"---\n"
     digest_text += f"📊 Источники: {total_channels} каналов\n"
     digest_text += f"📨 Обработано сообщений: {total_messages}\n"
-    digest_text += f"⏰ Сводка создана: {datetime.now().strftime('%H:%M')}\n"
+    digest_text += f"⏰ Сводка создана: {datetime.now(PORTUGAL_TIMEZONE).strftime('%H:%M')}\n"
     
     return digest_text
 
@@ -812,11 +819,14 @@ async def send_test_digest():
 
 def run_scheduler():
     """Запускает планировщик задач"""
-    # Сводки каждые 3 часа с 9:00 до 21:00
+    # Сводки каждые 2 часа с 7:00 до 21:00 по португальскому времени
+    schedule.every().day.at("07:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("09:00").do(lambda: asyncio.run(send_scheduled_digest()))
-    schedule.every().day.at("12:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("11:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("13:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("15:00").do(lambda: asyncio.run(send_scheduled_digest()))
-    schedule.every().day.at("18:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("17:00").do(lambda: asyncio.run(send_scheduled_digest()))
+    schedule.every().day.at("19:00").do(lambda: asyncio.run(send_scheduled_digest()))
     schedule.every().day.at("21:00").do(lambda: asyncio.run(send_scheduled_digest()))
     
     # Тестовая сводка через 2 минуты после запуска (только для проверки)
@@ -855,7 +865,7 @@ def main():
     # Запускаем планировщик в отдельном потоке
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    logger.info("Планировщик автоматических сводок запущен (9:00, 12:00, 15:00, 18:00, 21:00 каждый день)")
+    logger.info("Планировщик автоматических сводок запущен (7:00, 9:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00 каждый день по португальскому времени)")
     
     # Запускаем бота с обработкой ошибок
     logger.info("Бот запущен")
