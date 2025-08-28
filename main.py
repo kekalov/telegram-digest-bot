@@ -174,6 +174,20 @@ PREDEFINED_CHANNELS = {
         'username': 'superslowflow',
         'type': 'channel',
         'web_url': 'https://t.me/superslowflow'
+    },
+    'vcnews': {
+        'id': 'vcnews',
+        'title': 'VC News',
+        'username': 'vcnews',
+        'type': 'channel',
+        'web_url': 'https://t.me/vcnews'
+    },
+    'mediazzzona': {
+        'id': 'mediazzzona',
+        'title': 'Mediazzzona',
+        'username': 'mediazzzona',
+        'type': 'channel',
+        'web_url': 'https://t.me/mediazzzona'
     }
 }
 
