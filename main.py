@@ -332,6 +332,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • `/manage_channels` - управление каналами
 • `/add_channel @username` - добавить канал по username
 • `/collect_messages` - собрать свежие сообщения из каналов
+• `/status` - показать статус бота
+• `/version` - показать версию и время следующего дайджеста
 
 **Как добавить канал:**
 1. Используйте `/manage_channels` для выбора предустановленных каналов
@@ -606,10 +608,19 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     monitored_channels = message_store.get_monitored_channels()
     all_messages = message_store.get_messages_for_period(24)
     
+    # Получаем текущее время по португальскому времени
+    now = datetime.now(PORTUGAL_TIMEZONE)
+    
     status_text = f"📊 **Статус бота:**\n\n"
+    status_text += f"🕐 **Время (Португалия):** {now.strftime('%d.%m.%Y %H:%M')}\n"
     status_text += f"📋 Каналов в мониторинге: {len(monitored_channels)}\n"
     status_text += f"📨 Каналов с сообщениями: {len(all_messages)}\n"
     status_text += f"💬 Всего сообщений: {sum(len(msgs) for msgs in all_messages.values())}\n\n"
+    
+    # Информация о расписании
+    status_text += f"⏰ **Расписание дайджестов:**\n"
+    status_text += f"Каждые 2 часа: 7:00, 9:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00\n"
+    status_text += f"(по португальскому времени)\n\n"
     
     if monitored_channels:
         status_text += f"✅ **Отслеживаемые каналы:**\n"
@@ -621,6 +632,37 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_text += f"Используйте `/manage_channels` для добавления каналов\n"
     
     await update.message.reply_text(status_text, parse_mode='Markdown')
+
+async def version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /version - показывает версию и время следующего дайджеста"""
+    now = datetime.now(PORTUGAL_TIMEZONE)
+    current_hour = now.hour
+    
+    # Определяем время следующего дайджеста
+    digest_times = [7, 9, 11, 13, 15, 17, 19, 21]
+    next_digest = None
+    
+    for time in digest_times:
+        if time > current_hour:
+            next_digest = time
+            break
+    
+    if next_digest is None:
+        # Если сейчас после 21:00, следующий дайджест завтра в 7:00
+        next_digest = 7
+        next_digest_date = (now + timedelta(days=1)).strftime('%d.%m.%Y')
+    else:
+        next_digest_date = now.strftime('%d.%m.%Y')
+    
+    version_text = f"🤖 **Версия бота:** v2.0 (обновлено 28.08.2024)\n\n"
+    version_text += f"🕐 **Текущее время (Португалия):** {now.strftime('%d.%m.%Y %H:%M')}\n"
+    version_text += f"⏰ **Следующий дайджест:** {next_digest:02d}:00 {next_digest_date}\n\n"
+    version_text += f"📅 **Расписание:** каждые 2 часа (7:00-21:00)\n"
+    version_text += f"🌍 **Часовой пояс:** Португалия (UTC+1)\n"
+    version_text += f"📊 **Статус:** Активен и работает\n\n"
+    version_text += f"💡 Используйте `/status` для подробной информации"
+    
+    await update.message.reply_text(version_text, parse_mode='Markdown')
 
 async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /digest"""
@@ -858,6 +900,7 @@ def main():
     application.add_handler(CommandHandler("collect_messages", collect_messages_command))
     application.add_handler(CommandHandler("status", status))
     application.add_handler(CommandHandler("list_channels", list_channels))
+    application.add_handler(CommandHandler("version", version_command))
     
     # Обработчик callback'ов для кнопок (только для manage_channels)
     application.add_handler(CallbackQueryHandler(handle_callback))
