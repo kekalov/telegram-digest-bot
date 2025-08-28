@@ -347,12 +347,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Бот собирает сообщения через веб-интерфейс Telegram каналов. Формирует сводку 8 раз в день каждые 2 часа (7:00 - 21:00) по португальскому времени
     """
     
-    await update.message.reply_text(help_text, parse_mode='Markdown')
+    await update.message.reply_text(help_text)
 
 async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /add_channel"""
     if not context.args:
-        await update.message.reply_text("❌ Укажите канал: `/add_channel @channel_name`", parse_mode='Markdown')
+        await update.message.reply_text("❌ Укажите канал: /add_channel @channel_name")
         return
     
     channel_username = context.args[0].lstrip('@')
@@ -370,9 +370,8 @@ async def add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_store.channels[channel_username] = channel_info
     
     await update.message.reply_text(
-        f"✅ Канал **@{channel_username}** добавлен!\n\n"
-        f"Используйте `/manage_channels` для включения его в анализ.",
-        parse_mode='Markdown'
+        f"✅ Канал @{channel_username} добавлен!\n\n"
+        f"Используйте /manage_channels для включения его в анализ."
     )
 
 async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -419,15 +418,15 @@ async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    status_text = f"📋 **Управление каналами для анализа**\n\n"
+    status_text = f"📋 Управление каналами для анализа\n\n"
     status_text += f"Отслеживается: {len(monitored_channels)} из {len(all_channels)} каналов\n\n"
     status_text += "Нажмите на канал, чтобы включить/выключить его анализ:"
     
     # Проверяем, откуда вызвана функция
     if update.callback_query:
-        await update.callback_query.edit_message_text(status_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.callback_query.edit_message_text(status_text, reply_markup=reply_markup)
     else:
-        await update.message.reply_text(status_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.message.reply_text(status_text, reply_markup=reply_markup)
 
 async def collect_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /collect_messages"""
@@ -485,7 +484,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message_store.add_channel(channel_id, channel_info)
             status = "✅ включен"
         
-        await query.edit_message_text(f"Канал **{channel_info['title']}** {status} для анализа", parse_mode='Markdown')
+        await query.edit_message_text(f"Канал {channel_info['title']} {status} для анализа")
         
         # Показываем обновленный интерфейс
         await manage_channels(update, context)
@@ -600,9 +599,9 @@ async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, channel in enumerate(channels, 1):
         username = f"@{channel.get('username', 'private')}" if channel.get('username') else "Приватный канал"
         message_count = len(message_store.messages.get(channel['id'], []))
-        response_text += f"{i}. **{channel['title']}** ({username}) - {message_count} сообщений\n"
+        response_text += f"{i}. {channel['title']} ({username}) - {message_count} сообщений\n"
     
-    await update.message.reply_text(response_text, parse_mode='Markdown')
+    await update.message.reply_text(response_text)
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /status - показывает статус бота"""
@@ -612,34 +611,34 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Получаем текущее время по португальскому времени
     now = datetime.now(PORTUGAL_TIMEZONE)
     
-    status_text = f"📊 **Статус бота:**\n\n"
-    status_text += f"🕐 **Время (Португалия):** {now.strftime('%d.%m.%Y %H:%M')}\n"
+    status_text = f"📊 Статус бота:\n\n"
+    status_text += f"🕐 Время (Португалия): {now.strftime('%d.%m.%Y %H:%M')}\n"
     status_text += f"📋 Каналов в мониторинге: {len(monitored_channels)}\n"
     status_text += f"📨 Каналов с сообщениями: {len(all_messages)}\n"
     status_text += f"💬 Всего сообщений: {sum(len(msgs) for msgs in all_messages.values())}\n\n"
     
     # Информация о расписании
-    status_text += f"⏰ **Расписание дайджестов:**\n"
+    status_text += f"⏰ Расписание дайджестов:\n"
     status_text += f"Каждые 2 часа: 7:00, 9:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00\n"
     status_text += f"(по португальскому времени)\n\n"
     
     # Информация о канале
     if DIGEST_CHANNEL_ID:
-        status_text += f"📢 **Канал для публикации:** {DIGEST_CHANNEL_ID}\n"
+        status_text += f"📢 Канал для публикации: {DIGEST_CHANNEL_ID}\n"
     else:
-        status_text += f"📢 **Канал для публикации:** не настроен\n"
+        status_text += f"📢 Канал для публикации: не настроен\n"
     status_text += f"\n"
     
     if monitored_channels:
-        status_text += f"✅ **Отслеживаемые каналы:**\n"
+        status_text += f"✅ Отслеживаемые каналы:\n"
         for i, channel in enumerate(monitored_channels, 1):
             message_count = len(message_store.messages.get(channel['id'], []))
             status_text += f"{i}. {channel['title']} ({message_count} сообщений)\n"
     else:
-        status_text += f"❌ **Нет отслеживаемых каналов**\n"
-        status_text += f"Используйте `/manage_channels` для добавления каналов\n"
+        status_text += f"❌ Нет отслеживаемых каналов\n"
+        status_text += f"Используйте /manage_channels для добавления каналов\n"
     
-    await update.message.reply_text(status_text, parse_mode='Markdown')
+    await update.message.reply_text(status_text)
 
 async def version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /version - показывает версию и время следующего дайджеста"""
@@ -662,15 +661,15 @@ async def version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         next_digest_date = now.strftime('%d.%m.%Y')
     
-    version_text = f"🤖 **Версия бота:** v2.0 (обновлено 28.08.2024)\n\n"
-    version_text += f"🕐 **Текущее время (Португалия):** {now.strftime('%d.%m.%Y %H:%M')}\n"
-    version_text += f"⏰ **Следующий дайджест:** {next_digest:02d}:00 {next_digest_date}\n\n"
-    version_text += f"📅 **Расписание:** каждые 2 часа (7:00-21:00)\n"
-    version_text += f"🌍 **Часовой пояс:** Португалия (UTC+1)\n"
-    version_text += f"📊 **Статус:** Активен и работает\n\n"
-    version_text += f"💡 Используйте `/status` для подробной информации"
+    version_text = f"🤖 Версия бота: v2.0 (обновлено 28.08.2024)\n\n"
+    version_text += f"🕐 Текущее время (Португалия): {now.strftime('%d.%m.%Y %H:%M')}\n"
+    version_text += f"⏰ Следующий дайджест: {next_digest:02d}:00 {next_digest_date}\n\n"
+    version_text += f"📅 Расписание: каждые 2 часа (7:00-21:00)\n"
+    version_text += f"🌍 Часовой пояс: Португалия (UTC+1)\n"
+    version_text += f"📊 Статус: Активен и работает\n\n"
+    version_text += f"💡 Используйте /status для подробной информации"
     
-    await update.message.reply_text(version_text, parse_mode='Markdown')
+    await update.message.reply_text(version_text)
 
 async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /digest"""
@@ -684,8 +683,7 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     await application_global.bot.send_message(
                         chat_id=DIGEST_CHANNEL_ID,
-                        text=f"📰 **СВОДКА ПО ЗАПРОСУ**\n\n{digest_text}",
-                        parse_mode='Markdown'
+                        text=f"📰 СВОДКА ПО ЗАПРОСУ\n\n{digest_text}"
                     )
                     await update.message.reply_text(f"✅ Сводка отправлена в канал {DIGEST_CHANNEL_ID}")
                 except Exception as e:
@@ -844,8 +842,7 @@ async def send_scheduled_digest():
             try:
                 await application_global.bot.send_message(
                     chat_id=DIGEST_CHANNEL_ID,
-                    text=f"🌅 **ЕЖЕДНЕВНАЯ СВОДКА**\n\n{digest_text}",
-                    parse_mode='Markdown'
+                    text=f"🌅 ЕЖЕДНЕВНАЯ СВОДКА\n\n{digest_text}"
                 )
                 logger.info(f"Автоматическая сводка отправлена в канал {DIGEST_CHANNEL_ID}")
             except Exception as e:
