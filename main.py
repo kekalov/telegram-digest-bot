@@ -1058,8 +1058,16 @@ async def create_short_summary() -> str:
     for msg in all_messages:
         text = msg['text']
         
+        # Очищаем текст от рекламных фраз
+        text = re.sub(r'Подпишись на.*?\.', '', text)
+        text = re.sub(r'Читать далее.*?\.', '', text)
+        text = re.sub(r'Источник:.*?\.', '', text)
+        text = re.sub(r'Ссылка:.*?\.', '', text)
+        text = re.sub(r'Подпишись на.*?в.*?\.', '', text)
+        text = re.sub(r'Подпишись на.*?Max.*?\.', '', text)
+        text = re.sub(r'Подпишись на.*?Telegram.*?\.', '', text)
+        
         # Извлекаем ключевые факты из текста
-        # Ищем упоминания стран, действий, цифр
         country_keywords = ['россия', 'украина', 'сша', 'китай', 'европа', 'германия', 'франция', 
                           'великобритания', 'япония', 'индия', 'бразилия', 'канада', 'австралия', 
                           'иран', 'израиль', 'палестина', 'турция', 'саудовская аравия', 'египет']
@@ -1067,46 +1075,46 @@ async def create_short_summary() -> str:
         text_lower = text.lower()
         mentioned_countries = [country for country in country_keywords if country in text_lower]
         
-        if mentioned_countries:
+        if mentioned_countries and len(text.strip()) > 10:
             countries_mentioned.update(mentioned_countries)
             
-            # Сокращаем до ключевой информации (первые 8-10 слов)
+            # Сокращаем до ключевой информации (первые 12-15 слов)
             words = text.split()
-            if len(words) > 10:
-                fact = ' '.join(words[:10])
-                # Убираем лишние символы в конце
-                if not fact.endswith(('.', '!', '?')):
-                    fact += '...'
+            if len(words) > 15:
+                # Ищем последнюю точку в первых 15 словах
+                first_15_words = ' '.join(words[:15])
+                last_dot = first_15_words.rfind('.')
+                if last_dot > 0:
+                    fact = first_15_words[:last_dot + 1]
+                else:
+                    fact = ' '.join(words[:12]) + '.'
             else:
                 fact = text
+                if not fact.endswith(('.', '!', '?')):
+                    fact += '.'
             
             # Очищаем от лишних символов
             fact = re.sub(r'[^\w\s.,!?\-]', '', fact)
             fact = ' '.join(fact.split())  # Убираем лишние пробелы
             
-            if len(fact) > 5:  # Только если есть смысл
+            if len(fact) > 8:  # Только если есть смысл
                 summary_facts.append(fact)
-    
-    # Если фактов мало, добавляем общие
-    if len(summary_facts) < 5:
-        summary_facts.extend([
-            "Геополитическая напряженность продолжается",
-            "Экономические решения принимаются",
-            "Дипломатические инициативы развиваются",
-            "Технологические проекты реализуются",
-            "Экологические программы запускаются"
-        ])
     
     # Создаем резюме в стиле "кто что делает"
     if summary_facts:
-        # Берем первые 8-10 фактов для краткости
-        selected_facts = summary_facts[:8]
+        # Берем первые 6-8 фактов для краткости
+        selected_facts = summary_facts[:6]
+        
+        # Объединяем в единый читаемый абзац
         summary_content = ", ".join(selected_facts)
         
         # Добавляем общий вывод
         summary_content += ". Мир адаптируется к новым геополитическим реалиям."
         
         summary_text += summary_content + "\n\n"
+    else:
+        # Если нет фактов, добавляем общее резюме
+        summary_text += "Геополитическая ситуация остается сложной, страны принимают решения по ключевым вопросам. Мир адаптируется к новым реалиям.\n\n"
     
     # Добавляем краткую статистику
     total_channels = len(set(msg['channel'] for msg in all_messages))
