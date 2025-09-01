@@ -497,10 +497,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"Канал {channel_info['title']} {status} для анализа")
         
         # Показываем обновленный интерфейс
-        await refresh_channels_interface(query)
+        await manage_channels(update, context)
     
     elif data == "refresh_channels":
-        await refresh_channels_interface(query)
+        await manage_channels(update, context)
     
     elif data == "select_all_channels":
         # Включаем все каналы
@@ -508,14 +508,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message_store.add_channel(channel_id, channel_info)
         
         await query.edit_message_text("✅ Все каналы включены для анализа")
-        await refresh_channels_interface(query)
+        await manage_channels(update, context)
     
     elif data == "deselect_all_channels":
         # Отключаем все каналы
         message_store.monitored_channels.clear()
         
         await query.edit_message_text("❌ Все каналы отключены от анализа")
-        await refresh_channels_interface(query)
+        await manage_channels(update, context)
     
     # Обработка новых кнопок
     elif data == "digest":
@@ -531,7 +531,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"❌ Ошибка при создании сводки: {str(e)}")
     
     elif data == "manage_channels":
-        await refresh_channels_interface(query)
+        await manage_channels(update, context)
     
     elif data == "collect_messages":
         await query.edit_message_text("🔄 Собираю свежие сообщения из каналов...")
@@ -1280,57 +1280,7 @@ async def create_short_summary() -> str:
 # Глобальная переменная для приложения
 application_global = None
 
-async def refresh_channels_interface(query):
-    """Обновляет интерфейс управления каналами (для callback'ов)"""
-    user_id = query.from_user.id
-    
-    # Добавляем предустановленные каналы в хранилище
-    for channel_id, channel_info in PREDEFINED_CHANNELS.items():
-        message_store.channels[channel_id] = message_store.channels.get(channel_id, channel_info)
-    
-    all_channels = message_store.get_all_channels()
-    monitored_channels = message_store.get_monitored_channels()
-    monitored_ids = {channel['id'] for channel in monitored_channels}
-    
 
-    
-    if not all_channels:
-        await query.edit_message_text(
-            "📭 Пока нет каналов для анализа.\n\n"
-            "Используйте `/add_channel @username` для добавления каналов!"
-        )
-        return
-    
-    # Создаем клавиатуру с каналами
-    keyboard = []
-    for channel in all_channels:
-        channel_id = channel['id']
-        channel_title = channel['title']
-        is_monitored = channel_id in monitored_ids
-        
-        # Создаем кнопку с индикатором статуса
-        status_emoji = "✅" if is_monitored else "❌"
-        button_text = f"{status_emoji} {channel_title}"
-        
-        keyboard.append([InlineKeyboardButton(
-            button_text, 
-            callback_data=f"toggle_channel:{channel_id}"
-        )])
-    
-    # Добавляем кнопки управления
-    keyboard.append([
-        InlineKeyboardButton("🔄 Обновить", callback_data="refresh_channels"),
-        InlineKeyboardButton("✅ Выбрать все", callback_data="select_all_channels"),
-        InlineKeyboardButton("❌ Снять все", callback_data="deselect_all_channels")
-    ])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    status_text = f"📋 Управление каналами для анализа\n\n"
-    status_text += f"Отслеживается: {len(monitored_channels)} из {len(all_channels)} каналов\n\n"
-    status_text += "Нажмите на канал, чтобы включить/выключить его анализ:"
-    
-    await query.edit_message_text(status_text, reply_markup=reply_markup)
 
 async def send_scheduled_digest():
     """Отправляет автоматическую сводку в 19:00"""
