@@ -480,12 +480,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Переключаем статус канала
+        logger.info(f"Переключаем канал {channel_id} ({channel_info['title']})")
+        logger.info(f"Текущие отслеживаемые каналы: {list(message_store.monitored_channels.keys())}")
+        
         if channel_id in message_store.monitored_channels:
             message_store.remove_channel(channel_id)
             status = "❌ отключен"
+            logger.info(f"Канал {channel_id} отключен")
         else:
             message_store.add_channel(channel_id, channel_info)
             status = "✅ включен"
+            logger.info(f"Канал {channel_id} включен")
+        
+        logger.info(f"После изменения отслеживаемые каналы: {list(message_store.monitored_channels.keys())}")
         
         await query.edit_message_text(f"Канал {channel_info['title']} {status} для анализа")
         
