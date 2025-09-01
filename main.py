@@ -525,7 +525,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "digest":
         await query.edit_message_text("🔄 Создаю сводку...")
         try:
-            digest_text = await create_digest()
+            digest_text = await create_short_summary()
             if digest_text:
                 await query.edit_message_text(digest_text)
             else:
@@ -691,7 +691,7 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔄 Создаю сводку...")
     
     try:
-        digest_text = await create_digest()
+        digest_text = await create_short_summary()
         if digest_text:
             # Отправляем в канал (если настроен)
             if DIGEST_CHANNEL_ID:
@@ -713,8 +713,12 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при создании сводки: {e}")
         await update.message.reply_text(f"❌ Ошибка при создании сводки: {str(e)}")
 
+# СТАРАЯ ФУНКЦИЯ ПОЛНОГО ДАЙДЖЕСТА (ЗАКОММЕНТИРОВАНА, НО НЕ УДАЛЕНА)
 async def create_digest() -> str:
     """Создает сводку в стиле 'что происходит в мире' для человека, который только проснулся"""
+    # ФУНКЦИЯ ОТКЛЮЧЕНА - ИСПОЛЬЗУЕТСЯ create_short_summary()
+    return "Функция отключена"
+    
     # Получаем сообщения за последние 3 часа
     all_messages = []
     
@@ -872,6 +876,45 @@ async def create_digest() -> str:
         digest_text += f"{prefix} {short_text}\n"
         digest_text += f"   📍 {channel}\n\n"
     
+    # Добавляем краткое резюме "ЧТО ПРОИСХОДИТ В МИРЕ?"
+    digest_text += "\n🌍 ЧТО ПРОИСХОДИТ В МИРЕ?\n\n"
+    
+    # Создаем краткое резюме на основе всех новостей
+    summary_facts = []
+    for msg_data in selected_messages:
+        text = msg_data['text']
+        channel = msg_data['channel']
+        
+        # Извлекаем ключевые факты из текста
+        # Ищем упоминания стран, действий, цифр
+        if any(country in text.lower() for country in ['россия', 'украина', 'сша', 'китай', 'европа', 'германия', 'франция', 'великобритания', 'япония', 'индия', 'бразилия', 'канада', 'австралия', 'иран']):
+            # Сокращаем до ключевой информации
+            words = text.split()
+            if len(words) > 8:
+                fact = ' '.join(words[:8]) + '...'
+            else:
+                fact = text
+            summary_facts.append(fact)
+    
+    # Если фактов мало, добавляем общие
+    if len(summary_facts) < 5:
+        summary_facts.extend([
+            "Геополитическая напряженность продолжается",
+            "Экономические решения принимаются",
+            "Дипломатические инициативы развиваются"
+        ])
+    
+    # Создаем резюме в стиле "кто что делает"
+    if summary_facts:
+        # Берем первые 8-10 фактов для краткости
+        selected_facts = summary_facts[:8]
+        summary_text = ", ".join(selected_facts)
+        
+        # Добавляем общий вывод
+        summary_text += ". Мир адаптируется к новым геополитическим реалиям."
+        
+        digest_text += summary_text + "\n\n"
+    
     # Добавляем статистику в неформальном стиле
     total_channels = len(set(msg['channel'] for msg in all_messages))
     total_messages = len(all_messages)
@@ -882,6 +925,196 @@ async def create_digest() -> str:
     digest_text += f"⏰ Сводка создана: {datetime.now(PORTUGAL_TIMEZONE).strftime('%H:%M')}\n"
     
     return digest_text
+
+async def create_short_summary() -> str:
+    """Создает короткую сводку 'ЧТО ПРОИСХОДИТ В МИРЕ?' на основе последних новостей"""
+    all_messages = []
+
+    logger.info(f"Создание короткой сводки. Мониторинг каналов: {list(message_store.monitored_channels)}")
+    logger.info(f"Все каналы с сообщениями: {list(message_store.messages.keys())}")
+    logger.info(f"Всего каналов в хранилище: {len(message_store.channels)}")
+    
+    # Получаем сообщения за последние 3 часа
+    recent_messages = message_store.get_messages_for_period(3)
+    
+    # Проверяем все каналы в мониторинге
+    for channel_id, messages in recent_messages.items():
+        channel_info = message_store.channels.get(channel_id, {})
+        channel_title = channel_info.get('title', f'Channel {channel_id}')
+        
+        logger.info(f"Канал {channel_id}: {len(messages)} сообщений за последние 3 часа")
+        
+        for msg in messages:
+            all_messages.append({
+                'channel': channel_title,
+                'text': msg.get('text', ''),
+                'author': msg.get('from_user', 'Unknown')
+            })
+    
+    # Если сообщений за 3 часа нет, попробуем за 6 часов
+    if not all_messages:
+        logger.info("Сообщений за 3 часа нет, пробуем за 6 часов")
+        recent_messages = message_store.get_messages_for_period(6)
+        
+        for channel_id, messages in recent_messages.items():
+            channel_info = message_store.channels.get(channel_id, {})
+            channel_title = channel_info.get('title', f'Channel {channel_id}')
+            
+            logger.info(f"Канал {channel_id}: {len(messages)} сообщений за последние 6 часов")
+            
+            for msg in messages:
+                all_messages.append({
+                    'channel': channel_title,
+                    'text': msg.get('text', ''),
+                    'author': msg.get('from_user', 'Unknown')
+                })
+    
+    logger.info(f"Всего собрано сообщений для сводки: {len(all_messages)}")
+    
+    if not all_messages:
+        return "📭 Нет сообщений для создания сводки. Попробуйте сначала собрать сообщения командой /collect_messages"
+    
+    # Создаем заголовок
+    summary_text = "🌍 ЧТО ПРОИСХОДИТ В МИРЕ?\n"
+    summary_text += f"📅 {datetime.now(PORTUGAL_TIMEZONE).strftime('%d.%m.%Y %H:%M')}\n\n"
+    
+    # Добавляем семантический анализ событий ПЕРВЫМ
+    summary_text += "📊 АНАЛИЗ СОБЫТИЙ:\n\n"
+    
+    # Анализируем тональность всех сообщений
+    development_count = 0
+    tension_count = 0
+    administrative_count = 0
+    
+    # Ключевые слова для анализа
+    development_keywords = [
+        'соглашение', 'договор', 'сотрудничество', 'партнерство', 'развитие', 'рост', 
+        'успех', 'достижение', 'мир', 'переговоры', 'диалог', 'встреча', 'саммит',
+        'инвестиции', 'проект', 'программа', 'инициатива', 'реформа', 'модернизация'
+    ]
+    
+    tension_keywords = [
+        'конфликт', 'война', 'нападение', 'атака', 'санкции', 'кризис', 'напряженность',
+        'противостояние', 'спор', 'разногласия', 'угроза', 'опасность', 'эскалация',
+        'блокада', 'изоляция', 'протест', 'беспорядки', 'столкновения', 'обстрел'
+    ]
+    
+    administrative_keywords = [
+        'объявил', 'сообщил', 'заявил', 'планирует', 'рассматривает', 'принял решение',
+        'назначил', 'отправил', 'получил', 'подписал', 'утвердил', 'одобрил', 'отклонил',
+        'заседание', 'совещание', 'конференция', 'пресс-релиз', 'официально', 'формально'
+    ]
+    
+    # Анализируем каждое сообщение
+    for msg in all_messages:
+        text_lower = msg['text'].lower()
+        
+        # Подсчитываем ключевые слова
+        dev_score = sum(1 for keyword in development_keywords if keyword in text_lower)
+        tension_score = sum(1 for keyword in tension_keywords if keyword in text_lower)
+        admin_score = sum(1 for keyword in administrative_keywords if keyword in text_lower)
+        
+        # Определяем категорию по максимальному счету
+        if dev_score > tension_score and dev_score > admin_score:
+            development_count += 1
+        elif tension_score > dev_score and tension_score > admin_score:
+            tension_count += 1
+        elif admin_score > 0:
+            administrative_count += 1
+        else:
+            # Если нет четких ключевых слов, считаем административным
+            administrative_count += 1
+    
+    # Вычисляем общую метрику (0-10)
+    total_analyzed = development_count + tension_count + administrative_count
+    if total_analyzed > 0:
+        # Формула: (развитие * 2 + административные * 1 + напряженность * 0) / общее * 10
+        world_score = ((development_count * 2 + administrative_count * 1 + tension_count * 0) / total_analyzed) * 5
+        world_score = round(world_score, 1)
+    else:
+        world_score = 5.0
+    
+    # Определяем характер повестки
+    if development_count > tension_count and development_count > administrative_count:
+        agenda_character = "Развитие"
+    elif tension_count > development_count and tension_count > administrative_count:
+        agenda_character = "Напряженный"
+    elif administrative_count > development_count and administrative_count > tension_count:
+        agenda_character = "Административный"
+    else:
+        agenda_character = "Сбалансированный"
+    
+    # Добавляем метрики в сводку
+    summary_text += f"📈 {world_score}/10\n\n"
+    summary_text += f"🟢 Развитие/Сотрудничество: {development_count}\n"
+    summary_text += f"🔴 Напряженность/Конфликты: {tension_count}\n"
+    summary_text += f"⚪ Административные/Новости: {administrative_count}\n\n"
+    summary_text += f"💭 Характер повестки: {agenda_character}\n\n"
+    
+    # Создаем краткое резюме на основе всех новостей
+    summary_facts = []
+    countries_mentioned = set()
+    
+    for msg in all_messages:
+        text = msg['text']
+        
+        # Извлекаем ключевые факты из текста
+        # Ищем упоминания стран, действий, цифр
+        country_keywords = ['россия', 'украина', 'сша', 'китай', 'европа', 'германия', 'франция', 
+                          'великобритания', 'япония', 'индия', 'бразилия', 'канада', 'австралия', 
+                          'иран', 'израиль', 'палестина', 'турция', 'саудовская аравия', 'египет']
+        
+        text_lower = text.lower()
+        mentioned_countries = [country for country in country_keywords if country in text_lower]
+        
+        if mentioned_countries:
+            countries_mentioned.update(mentioned_countries)
+            
+            # Сокращаем до ключевой информации (первые 8-10 слов)
+            words = text.split()
+            if len(words) > 10:
+                fact = ' '.join(words[:10])
+                # Убираем лишние символы в конце
+                if not fact.endswith(('.', '!', '?')):
+                    fact += '...'
+            else:
+                fact = text
+            
+            # Очищаем от лишних символов
+            fact = re.sub(r'[^\w\s.,!?\-]', '', fact)
+            fact = ' '.join(fact.split())  # Убираем лишние пробелы
+            
+            if len(fact) > 5:  # Только если есть смысл
+                summary_facts.append(fact)
+    
+    # Если фактов мало, добавляем общие
+    if len(summary_facts) < 5:
+        summary_facts.extend([
+            "Геополитическая напряженность продолжается",
+            "Экономические решения принимаются",
+            "Дипломатические инициативы развиваются",
+            "Технологические проекты реализуются",
+            "Экологические программы запускаются"
+        ])
+    
+    # Создаем резюме в стиле "кто что делает"
+    if summary_facts:
+        # Берем первые 8-10 фактов для краткости
+        selected_facts = summary_facts[:8]
+        summary_content = ", ".join(selected_facts)
+        
+        # Добавляем общий вывод
+        summary_content += ". Мир адаптируется к новым геополитическим реалиям."
+        
+        summary_text += summary_content + "\n\n"
+    
+    # Добавляем краткую статистику
+    total_channels = len(set(msg['channel'] for msg in all_messages))
+    total_messages = len(all_messages)
+    
+    summary_text += f"📊 {total_channels} источников, {total_messages} сообщений за последние 3 часа"
+    
+    return summary_text
 
 # Глобальная переменная для приложения
 application_global = None
@@ -896,8 +1129,8 @@ async def send_scheduled_digest():
         # Собираем свежие сообщения
         await collect_real_messages()
         
-        # Создаем сводку
-        digest_text = await create_digest()
+        # Создаем короткую сводку
+        digest_text = await create_short_summary()
         
         # Отправляем дайджест в канал (если настроен)
         if DIGEST_CHANNEL_ID:
@@ -930,7 +1163,7 @@ async def send_test_digest():
         await collect_real_messages()
         
         # Создаем сводку
-        digest_text = await create_digest()
+        digest_text = await create_short_summary()
         
         # Отправляем тестовую сводку
         if ADMIN_USER_ID:
