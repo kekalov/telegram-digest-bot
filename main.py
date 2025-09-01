@@ -955,19 +955,20 @@ def smart_summarize(text: str) -> str:
     # Если нет полных предложений, ищем естественное место для обрезания
     words = text.split()
     
-    # Ищем место где можно обрезать (после существительных, глаголов)
+    # Ищем место где можно обрезать (после существительных, глаголов, цифр)
     for i in range(min(20, len(words))):
         word = words[i].lower()
-        # Если слово заканчивается на существительное или глагол, можно обрезать
-        if any(word.endswith(ending) for ending in ['ать', 'ить', 'еть', 'ать', 'ость', 'ние', 'ство']):
-            if i > 10:  # Минимум 10 слов
+        # Если слово заканчивается на существительное, глагол или цифру, можно обрезать
+        if (any(word.endswith(ending) for ending in ['ать', 'ить', 'еть', 'ость', 'ние', 'ство']) or
+            word.isdigit() or word.replace(',', '').replace('.', '').isdigit()):
+            if i > 8:  # Минимум 8 слов
                 result = ' '.join(words[:i+1])
                 if not result.endswith(('.', '!', '?')):
                     result += '.'
                 return result
     
-    # Если ничего не подошло, берем первые 15 слов
-    result = ' '.join(words[:15])
+    # Если ничего не подошло, берем первые 12 слов (уменьшили с 15)
+    result = ' '.join(words[:12])
     if not result.endswith(('.', '!', '?')):
         result += '.'
     return result
@@ -1182,9 +1183,15 @@ async def create_short_summary() -> str:
         summary_content = re.sub(r'\.\.+', '.', summary_content)
         summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
         
-        # Убираем дублирование фраз (например, "850 тыс. 850 тыс.")
-        summary_content = re.sub(r'(\b\w+\s+\w+\s+\w+\s*\d+)\s+\1', r'\1', summary_content)
-        summary_content = re.sub(r'(\b\d+\s+\w+)\s+\1', r'\1', summary_content)
+        # Убираем дублирование фраз (улучшенная версия)
+        # Убираем "850 тыс. 850 тыс." → "850 тыс."
+        summary_content = re.sub(r'(\b\d+\s+тыс\.)\s+\1', r'\1', summary_content)
+        # Убираем "рынок акций рынок акций" → "рынок акций"
+        summary_content = re.sub(r'(\b\w+\s+\w+)\s+\1', r'\1', summary_content)
+        # Убираем "по индексу МосБиржи рынка акций" → "по индексу МосБиржи"
+        summary_content = re.sub(r'рынка акций\s*$', '', summary_content)
+        # Убираем "рынок акций РФ начал неделю с просадки ниже 2890 пунктов по индексу МосБиржи рынка акций" → "рынок акций РФ начал неделю с просадки ниже 2890 пунктов по индексу МосБиржи"
+        summary_content = re.sub(r'(\b\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+\s+\w+)\s+\1', r'\1', summary_content)
         
         summary_text += summary_content + "\n\n"
     else:
@@ -1243,9 +1250,13 @@ async def create_short_summary() -> str:
             summary_content = re.sub(r'\.\.+', '.', summary_content)
             summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
             
-            # Убираем дублирование фраз
-            summary_content = re.sub(r'(\b\w+\s+\w+\s+\w+\s*\d+)\s+\1', r'\1', summary_content)
-            summary_content = re.sub(r'(\b\d+\s+\w+)\s+\1', r'\1', summary_content)
+            # Убираем дублирование фраз (улучшенная версия)
+            # Убираем "850 тыс. 850 тыс." → "850 тыс."
+            summary_content = re.sub(r'(\b\d+\s+тыс\.)\s+\1', r'\1', summary_content)
+            # Убираем "рынок акций рынок акций" → "рынок акций"
+            summary_content = re.sub(r'(\b\w+\s+\w+)\s+\1', r'\1', summary_content)
+            # Убираем "по индексу МосБиржи рынка акций" → "по индексу МосБиржи"
+            summary_content = re.sub(r'рынка акций\s*$', '', summary_content)
             summary_text += summary_content + "\n\n"
         else:
             # Если совсем нет фактов, добавляем общее резюме
