@@ -792,32 +792,43 @@ async def create_digest() -> str:
                 break
     
     # Формируем список новостей в неформальном стиле
+    used_channels = set()  # Для отслеживания использованных каналов
+    
     for i, msg_data in enumerate(unique_messages, 1):
         text = msg_data['text']
         channel = msg_data['channel']
         
-        # Убираем ссылки из текста
+        # Пропускаем, если канал уже использован (для разнообразия источников)
+        if channel in used_channels and len(used_channels) < len(set(msg['channel'] for msg in all_messages)):
+            continue
+            
+        used_channels.add(channel)
+        
+        # Убираем ссылки и лишние элементы из текста
         text = re.sub(r'https?://[^\s]+', '', text)  # Убираем HTTP ссылки
         text = re.sub(r'www\.[^\s]+', '', text)      # Убираем www ссылки
         text = re.sub(r't\.me/[^\s]+', '', text)     # Убираем Telegram ссылки
+        text = re.sub(r'Подписаться на.*?\.', '', text)  # Убираем "Подписаться на..."
+        text = re.sub(r'Читать далее.*?\.', '', text)    # Убираем "Читать далее..."
+        text = re.sub(r'Источник:.*?\.', '', text)       # Убираем "Источник:..."
         
-        # Оптимизируем текст для емкого формата
-        if len(text) > 150:
+        # Делаем текст короче - только суть
+        if len(text) > 100:
             # Ищем естественное место для обрезания (конец предложения)
             sentences = text.split('.')
             if len(sentences) > 1:
                 # Берем первое полное предложение
                 short_text = sentences[0].strip() + '.'
-                if len(short_text) > 200:
+                if len(short_text) > 120:
                     # Если все еще длинное, берем по словам
                     words = text.split()
-                    short_text = ' '.join(words[:25])  # Первые 25 слов
+                    short_text = ' '.join(words[:15])  # Первые 15 слов для краткости
                     if not short_text.endswith('.'):
                         short_text += '.'
             else:
                 # Если нет точек, берем по словам
                 words = text.split()
-                short_text = ' '.join(words[:25])  # Первые 25 слов
+                short_text = ' '.join(words[:15])  # Первые 15 слов
                 if not short_text.endswith('.'):
                     short_text += '.'
         else:
