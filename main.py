@@ -425,8 +425,8 @@ async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_text += f"Отслеживается: {len(monitored_channels)} из {len(all_channels)} каналов\n\n"
     status_text += "Нажмите на канал, чтобы включить/выключить его анализ:"
     
-    # Проверяем, откуда вызвана функция
-    if update.callback_query:
+    # Отправляем сообщение (команда или callback)
+    if hasattr(update, 'callback_query') and update.callback_query:
         await update.callback_query.edit_message_text(status_text, reply_markup=reply_markup)
     else:
         await update.message.reply_text(status_text, reply_markup=reply_markup)
