@@ -1087,13 +1087,13 @@ async def create_short_summary() -> str:
             # Фильтруем только значимые новости (исключаем описания фото, общие фразы)
             text_lower = text.lower()
             
-            # Пропускаем описания фото и неинформативные сообщения
-            skip_phrases = ['автомобиль', 'фото', 'изображение', 'картинка', 'снимок', 'видео', 'ролик']
+            # Пропускаем только явные описания фото и неинформативные сообщения
+            skip_phrases = ['фото:', 'изображение:', 'картинка:', 'снимок:', 'видео:', 'ролик:']
             if any(phrase in text_lower for phrase in skip_phrases):
                 continue
             
-            # Пропускаем слишком короткие или неинформативные сообщения
-            if len(text.split()) < 5:
+            # Пропускаем только очень короткие сообщения
+            if len(text.split()) < 3:
                 continue
             
             # Сокращаем до ключевой информации (первые 12-15 слов)
@@ -1113,7 +1113,7 @@ async def create_short_summary() -> str:
             
             # Дополнительная очистка факта
             fact = fact.strip()
-            if len(fact) < 15:  # Слишком короткие факты пропускаем
+            if len(fact) < 8:  # Слишком короткие факты пропускаем
                 continue
             
             if len(fact) > 8:  # Только если есть смысл
@@ -1132,8 +1132,40 @@ async def create_short_summary() -> str:
         
         summary_text += summary_content + "\n\n"
     else:
-        # Если нет фактов, добавляем общее резюме
-        summary_text += "Геополитическая ситуация остается сложной, страны принимают решения по ключевым вопросам. Мир адаптируется к новым реалиям.\n\n"
+        # Fallback: если нет фактов с упоминанием стран, берем любые значимые сообщения
+        fallback_facts = []
+        for msg in all_messages:
+            text = msg['text']
+            
+            # Очищаем текст
+            text = re.sub(r'Подпишись на.*?\.', '', text)
+            text = re.sub(r'https?://[^\s]+', '', text)
+            text = re.sub(r'www\.[^\s]+', '', text)
+            text = re.sub(r'[^\w\s.,!?\-]', ' ', text)
+            text = re.sub(r'\s+', ' ', text)
+            
+            if len(text.strip()) > 10 and len(text.split()) >= 3:
+                words = text.split()
+                if len(words) > 12:
+                    fact = ' '.join(words[:12]) + '.'
+                else:
+                    fact = text
+                    if not fact.endswith(('.', '!', '?')):
+                        fact += '.'
+                
+                fact = fact.strip()
+                if len(fact) > 8:
+                    fallback_facts.append(fact)
+                    if len(fallback_facts) >= 3:  # Берем максимум 3 факта
+                        break
+        
+        if fallback_facts:
+            summary_content = ". ".join(fallback_facts)
+            summary_content = re.sub(r'\.\.+', '.', summary_content)
+            summary_text += summary_content + "\n\n"
+        else:
+            # Если совсем нет фактов, добавляем общее резюме
+            summary_text += "Геополитическая ситуация остается сложной, страны принимают решения по ключевым вопросам.\n\n"
     
     # Добавляем краткую статистику
     total_channels = len(set(msg['channel'] for msg in all_messages))
