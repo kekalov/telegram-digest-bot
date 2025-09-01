@@ -494,6 +494,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.info(f"После изменения отслеживаемые каналы: {list(message_store.monitored_channels.keys())}")
         
+
+        
         await query.edit_message_text(f"Канал {channel_info['title']} {status} для анализа")
         
         # Показываем обновленный интерфейс
@@ -1291,6 +1293,8 @@ async def refresh_channels_interface(query):
     all_channels = message_store.get_all_channels()
     monitored_channels = message_store.get_monitored_channels()
     monitored_ids = {channel['id'] for channel in monitored_channels}
+    
+
     
     if not all_channels:
         await query.edit_message_text(
