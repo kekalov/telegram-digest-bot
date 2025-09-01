@@ -1173,11 +1173,14 @@ async def create_short_summary() -> str:
         # Берем оптимальное количество фактов для читаемости
         selected_facts = summary_facts[:6]
         
-        # Разбиваем на короткие абзацы для лучшей читаемости
-        for i, fact in enumerate(selected_facts, 1):
-            summary_text += f"• {fact}\n"
+        # Объединяем в один читаемый абзац с правильными переходами
+        summary_content = ". ".join(selected_facts)
         
-        summary_text += "\n"
+        # Убираем двойные точки и делаем переходы плавными
+        summary_content = re.sub(r'\.\.+', '.', summary_content)
+        summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
+        
+        summary_text += summary_content + "\n\n"
     else:
         # Fallback: если нет фактов с упоминанием стран, берем любые значимые сообщения
         fallback_facts = []
@@ -1227,10 +1230,11 @@ async def create_short_summary() -> str:
                         break
         
         if fallback_facts:
-            # Разбиваем на короткие абзацы для лучшей читаемости
-            for fact in fallback_facts:
-                summary_text += f"• {fact}\n"
-            summary_text += "\n"
+            # Объединяем в один читаемый абзац
+            summary_content = ". ".join(fallback_facts)
+            summary_content = re.sub(r'\.\.+', '.', summary_content)
+            summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
+            summary_text += summary_content + "\n\n"
         else:
             # Если совсем нет фактов, добавляем общее резюме
             summary_text += "Геополитическая ситуация остается сложной, страны принимают решения по ключевым вопросам.\n\n"
