@@ -1058,7 +1058,7 @@ async def create_short_summary() -> str:
     for msg in all_messages:
         text = msg['text']
         
-        # Очищаем текст от рекламных фраз
+        # Очищаем текст от рекламных фраз и мусора
         text = re.sub(r'Подпишись на.*?\.', '', text)
         text = re.sub(r'Читать далее.*?\.', '', text)
         text = re.sub(r'Источник:.*?\.', '', text)
@@ -1066,6 +1066,12 @@ async def create_short_summary() -> str:
         text = re.sub(r'Подпишись на.*?в.*?\.', '', text)
         text = re.sub(r'Подпишись на.*?Max.*?\.', '', text)
         text = re.sub(r'Подпишись на.*?Telegram.*?\.', '', text)
+        text = re.sub(r'Подпишись на.*?ТАСС.*?\.', '', text)
+        text = re.sub(r'Подпишись на.*?Max', '', text)
+        text = re.sub(r'https?://[^\s]+', '', text)  # Удаляем URL
+        text = re.sub(r'www\.[^\s]+', '', text)  # Удаляем www ссылки
+        text = re.sub(r'[^\w\s.,!?\-]', ' ', text)  # Удаляем все спецсимволы кроме букв, цифр, пробелов и знаков препинания
+        text = re.sub(r'\s+', ' ', text)  # Убираем лишние пробелы
         
         # Извлекаем ключевые факты из текста
         country_keywords = ['россия', 'украина', 'сша', 'китай', 'европа', 'германия', 'франция', 
@@ -1093,23 +1099,27 @@ async def create_short_summary() -> str:
                 if not fact.endswith(('.', '!', '?')):
                     fact += '.'
             
-            # Очищаем от лишних символов
-            fact = re.sub(r'[^\w\s.,!?\-]', '', fact)
-            fact = ' '.join(fact.split())  # Убираем лишние пробелы
+            # Дополнительная очистка факта
+            fact = fact.strip()
+            if len(fact) < 10:  # Слишком короткие факты пропускаем
+                continue
             
             if len(fact) > 8:  # Только если есть смысл
                 summary_facts.append(fact)
     
     # Создаем резюме в стиле "кто что делает"
     if summary_facts:
-        # Берем первые 6-8 фактов для краткости
-        selected_facts = summary_facts[:6]
+        # Берем первые 4-5 фактов для краткости
+        selected_facts = summary_facts[:4]
         
-        # Объединяем в единый читаемый абзац
-        summary_content = ", ".join(selected_facts)
+        # Объединяем в единый читаемый абзац с правильными переходами
+        summary_content = ". ".join(selected_facts)
+        
+        # Убираем двойные точки
+        summary_content = re.sub(r'\.\.+', '.', summary_content)
         
         # Добавляем общий вывод
-        summary_content += ". Мир адаптируется к новым геополитическим реалиям."
+        summary_content += " Мир адаптируется к новым геополитическим реалиям."
         
         summary_text += summary_content + "\n\n"
     else:
