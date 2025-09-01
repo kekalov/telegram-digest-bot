@@ -494,8 +494,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.info(f"После изменения отслеживаемые каналы: {list(message_store.monitored_channels.keys())}")
         
-
-        
         await query.edit_message_text(f"Канал {channel_info['title']} {status} для анализа")
         
         # Показываем обновленный интерфейс
