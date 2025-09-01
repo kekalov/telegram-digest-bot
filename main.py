@@ -763,6 +763,7 @@ async def create_digest() -> str:
     # Создаем неформальную сводку "что происходит в мире"
     digest_text = "🌍 ЧТО ПРОИСХОДИТ В МИРЕ\n"
     digest_text += f"📅 {datetime.now(PORTUGAL_TIMEZONE).strftime('%d.%m.%Y %H:%M')}\n\n"
+    digest_text += "💡 Смотрю все самые важные новостные источники и делюсь с тобой, чтобы тебе не пришлось. Занимайся делами! 👊\n\n"
     
     # Собираем все тексты сообщений
     all_texts = []
@@ -771,46 +772,52 @@ async def create_digest() -> str:
         if text and len(text) > 10:  # Минимальная длина
             all_texts.append(text)
     
-    # Создаем топ-8 самых важных новостей
-    digest_text += "🔥 ТОП-8 ГЛАВНЫХ НОВОСТЕЙ:\n\n"
+    # Создаем топ-10 самых важных новостей
+    digest_text += "🔥 ТОП-10 ГЛАВНЫХ НОВОСТЕЙ:\n\n"
     
-    # Берем первые 8 уникальных сообщений (меньше для лучшего качества)
-    unique_texts = []
+    # Берем первые 10 уникальных сообщений с источниками
+    unique_messages = []
     seen_texts = set()
     
-    for text in all_texts:
+    for msg in all_messages:
+        text = msg['text'].strip()
+        channel = msg['channel']
+        
         # Убираем дубликаты и очень похожие тексты
         clean_text = text[:100].lower()  # Первые 100 символов для сравнения
-        if clean_text not in seen_texts:
+        if clean_text not in seen_texts and len(text) > 10:
             seen_texts.add(clean_text)
-            unique_texts.append(text)
-            if len(unique_texts) >= 8:
+            unique_messages.append({'text': text, 'channel': channel})
+            if len(unique_messages) >= 10:
                 break
     
     # Формируем список новостей в неформальном стиле
-    for i, text in enumerate(unique_texts, 1):
+    for i, msg_data in enumerate(unique_messages, 1):
+        text = msg_data['text']
+        channel = msg_data['channel']
+        
         # Убираем ссылки из текста
         text = re.sub(r'https?://[^\s]+', '', text)  # Убираем HTTP ссылки
         text = re.sub(r'www\.[^\s]+', '', text)      # Убираем www ссылки
         text = re.sub(r't\.me/[^\s]+', '', text)     # Убираем Telegram ссылки
         
-        # Делаем законченные умозаключения вместо обрезания
-        if len(text) > 120:
+        # Оптимизируем текст для емкого формата
+        if len(text) > 150:
             # Ищем естественное место для обрезания (конец предложения)
             sentences = text.split('.')
             if len(sentences) > 1:
                 # Берем первое полное предложение
                 short_text = sentences[0].strip() + '.'
-                if len(short_text) > 150:
+                if len(short_text) > 200:
                     # Если все еще длинное, берем по словам
                     words = text.split()
-                    short_text = ' '.join(words[:20])  # Первые 20 слов
+                    short_text = ' '.join(words[:25])  # Первые 25 слов
                     if not short_text.endswith('.'):
                         short_text += '.'
             else:
                 # Если нет точек, берем по словам
                 words = text.split()
-                short_text = ' '.join(words[:20])  # Первые 20 слов
+                short_text = ' '.join(words[:25])  # Первые 25 слов
                 if not short_text.endswith('.'):
                     short_text += '.'
         else:
@@ -823,7 +830,9 @@ async def create_digest() -> str:
         prefixes = ["💥", "📰", "🔥", "⚡", "🎯", "💡", "🚨", "📢", "🎪", "🌟"]
         prefix = prefixes[i-1] if i <= len(prefixes) else "📌"
         
-        digest_text += f"{prefix} {short_text}\n\n"
+        # Добавляем источник
+        digest_text += f"{prefix} {short_text}\n"
+        digest_text += f"   📍 {channel}\n\n"
     
     # Добавляем статистику в неформальном стиле
     total_channels = len(set(msg['channel'] for msg in all_messages))
