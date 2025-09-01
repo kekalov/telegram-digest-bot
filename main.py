@@ -772,10 +772,10 @@ async def create_digest() -> str:
         if text and len(text) > 10:  # Минимальная длина
             all_texts.append(text)
     
-    # Создаем топ-10 самых важных новостей
-    digest_text += "🔥 ТОП-10 ГЛАВНЫХ НОВОСТЕЙ:\n\n"
+    # Создаем 10 новостей
+    digest_text += "📰 10 НОВОСТЕЙ:\n\n"
     
-    # Берем первые 10 уникальных сообщений с источниками
+    # Берем больше уникальных сообщений для гарантии 10 новостей
     unique_messages = []
     seen_texts = set()
     
@@ -788,13 +788,14 @@ async def create_digest() -> str:
         if clean_text not in seen_texts and len(text) > 10:
             seen_texts.add(clean_text)
             unique_messages.append({'text': text, 'channel': channel})
-            if len(unique_messages) >= 10:
+            if len(unique_messages) >= 20:  # Берем больше для фильтрации
                 break
     
     # Формируем список новостей в неформальном стиле
-    used_channels = set()  # Для отслеживания использованных каналов
+    used_channels = []  # Для отслеживания использованных каналов
     total_available_channels = len(set(msg['channel'] for msg in all_messages))
     max_per_channel = max(1, 10 // total_available_channels) if total_available_channels > 0 else 1
+    selected_messages = []
     
     for i, msg_data in enumerate(unique_messages, 1):
         text = msg_data['text']
@@ -803,11 +804,29 @@ async def create_digest() -> str:
         # Считаем, сколько раз уже использовали этот канал
         channel_count = sum(1 for ch in used_channels if ch == channel)
         
-        # Пропускаем, если канал уже использован максимальное количество раз
-        if channel_count >= max_per_channel and len(used_channels) < total_available_channels:
+        # Пропускаем, если канал уже использован максимальное количество раз И есть другие каналы
+        if channel_count >= max_per_channel and len(set(used_channels)) < total_available_channels:
             continue
             
-        used_channels.add(channel)
+        used_channels.append(channel)
+        selected_messages.append(msg_data)
+        
+        # Останавливаемся, когда набрали 10 новостей
+        if len(selected_messages) >= 10:
+            break
+    
+    # Если не набрали 10 новостей, добавляем оставшиеся без ограничений
+    if len(selected_messages) < 10:
+        for msg_data in unique_messages:
+            if len(selected_messages) >= 10:
+                break
+            if msg_data not in selected_messages:
+                selected_messages.append(msg_data)
+    
+    # Формируем финальный список
+    for i, msg_data in enumerate(selected_messages[:10], 1):
+        text = msg_data['text']
+        channel = msg_data['channel']
         
         # Убираем ссылки и лишние элементы из текста
         text = re.sub(r'https?://[^\s]+', '', text)  # Убираем HTTP ссылки
