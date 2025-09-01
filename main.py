@@ -1108,7 +1108,22 @@ async def create_short_summary() -> str:
                 if last_dot > 0:
                     fact = first_15_words[:last_dot + 1]
                 else:
-                    fact = ' '.join(words[:12]) + '.'
+                    # Ищем естественное место для обрезания (конец предложения)
+                    # Берем первые 12 слов и ищем последний знак препинания
+                    first_12_words = ' '.join(words[:12])
+                    last_punctuation = max(
+                        first_12_words.rfind('.'),
+                        first_12_words.rfind('!'),
+                        first_12_words.rfind('?'),
+                        first_12_words.rfind(',')
+                    )
+                    if last_punctuation > 0:
+                        fact = first_12_words[:last_punctuation + 1]
+                    else:
+                        # Если нет знаков препинания, берем первые 10 слов
+                        fact = ' '.join(words[:10])
+                        if not fact.endswith(('.', '!', '?')):
+                            fact += '.'
             else:
                 fact = text
                 if not fact.endswith(('.', '!', '?')):
@@ -1150,7 +1165,21 @@ async def create_short_summary() -> str:
             if len(text.strip()) > 10 and len(text.split()) >= 3:
                 words = text.split()
                 if len(words) > 12:
-                    fact = ' '.join(words[:12]) + '.'
+                    # Ищем естественное место для обрезания
+                    first_12_words = ' '.join(words[:12])
+                    last_punctuation = max(
+                        first_12_words.rfind('.'),
+                        first_12_words.rfind('!'),
+                        first_12_words.rfind('?'),
+                        first_12_words.rfind(',')
+                    )
+                    if last_punctuation > 0:
+                        fact = first_12_words[:last_punctuation + 1]
+                    else:
+                        # Если нет знаков препинания, берем первые 10 слов
+                        fact = ' '.join(words[:10])
+                        if not fact.endswith(('.', '!', '?')):
+                            fact += '.'
                 else:
                     fact = text
                     if not fact.endswith(('.', '!', '?')):
