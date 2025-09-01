@@ -271,28 +271,17 @@ async def scrape_channel_messages(channel_username: str) -> List[dict]:
         
         logger.info(f"Собрано {len(messages)} сообщений из канала {channel_username}")
         
-        # Если сообщений нет, попробуем другой подход
+        # Если сообщений нет, возвращаем пустой список
         if not messages:
             logger.warning(f"Не удалось найти сообщения в канале {channel_username}")
-            # Добавим тестовое сообщение для демонстрации
-            messages.append({
-                'text': f'Тестовое сообщение из канала {channel_username}: Важные новости дня',
-                'from_user': 'Channel',
-                'timestamp': datetime.now(PORTUGAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S'),
-                'message_id': 1
-            })
+            return []
         
         return messages
         
     except Exception as e:
         logger.error(f"Ошибка при скрапинге канала {channel_username}: {e}")
-        # Возвращаем тестовое сообщение в случае ошибки
-        return [{
-            'text': f'Тестовое сообщение из канала {channel_username}: Важные новости дня',
-            'from_user': 'Channel',
-            'timestamp': datetime.now(PORTUGAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M:%S'),
-            'message_id': 1
-        }]
+        # Возвращаем пустой список в случае ошибки
+        return []
 
 async def collect_real_messages():
     """Собирает реальные сообщения из каналов"""
@@ -933,7 +922,12 @@ def smart_summarize(text: str) -> str:
     
     # Если текст короткий, возвращаем как есть
     if len(text.split()) <= 12:
-        return text
+        # Проверяем, что предложение не обрезано посередине
+        if text.endswith(('.', '!', '?')):
+            return text
+        else:
+            # Если нет знака препинания в конце, это может быть обрезанное предложение
+            return None
     
     # Ищем полные предложения в тексте
     sentences = []
@@ -1129,7 +1123,8 @@ async def create_short_summary() -> str:
             text_lower = text.lower()
             
             # Пропускаем только явные описания фото и неинформативные сообщения
-            skip_phrases = ['фото:', 'изображение:', 'картинка:', 'снимок:', 'видео:', 'ролик:']
+            skip_phrases = ['фото:', 'изображение:', 'картинка:', 'снимок:', 'видео:', 'ролик:', 
+                           'тестовое сообщение', 'важные новости дня', 'подпишись на', 'читать далее']
             if any(phrase in text_lower for phrase in skip_phrases):
                 continue
             
