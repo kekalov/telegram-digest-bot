@@ -1091,15 +1091,11 @@ async def create_short_summary() -> str:
         text = msg['text']
         
         # Очищаем текст от рекламных фраз и мусора
-        text = re.sub(r'Подпишись на.*?\.', '', text)
-        text = re.sub(r'Читать далее.*?\.', '', text)
-        text = re.sub(r'Источник:.*?\.', '', text)
-        text = re.sub(r'Ссылка:.*?\.', '', text)
-        text = re.sub(r'Подпишись на.*?в.*?\.', '', text)
-        text = re.sub(r'Подпишись на.*?Max.*?\.', '', text)
-        text = re.sub(r'Подпишись на.*?Telegram.*?\.', '', text)
-        text = re.sub(r'Подпишись на.*?ТАСС.*?\.', '', text)
-        text = re.sub(r'Подпишись на.*?Max', '', text)
+        text = re.sub(r'Подписаться на.*', '', text)  # Убираем "Подписаться на..." до конца строки
+        text = re.sub(r'Подпишись на.*', '', text)
+        text = re.sub(r'Читать далее.*', '', text)
+        text = re.sub(r'Источник:.*', '', text)
+        text = re.sub(r'Ссылка:.*', '', text)
         text = re.sub(r'https?://[^\s]+', '', text)  # Удаляем URL
         text = re.sub(r'www\.[^\s]+', '', text)  # Удаляем www ссылки
         text = re.sub(r'[^\w\s.,!?\-]', ' ', text)  # Удаляем все спецсимволы кроме букв, цифр, пробелов и знаков препинания
@@ -1166,7 +1162,11 @@ async def create_short_summary() -> str:
             text = msg['text']
             
             # Очищаем текст
-            text = re.sub(r'Подпишись на.*?\.', '', text)
+            text = re.sub(r'Подписаться на.*', '', text)  # Убираем "Подписаться на..." до конца строки
+            text = re.sub(r'Подпишись на.*', '', text)
+            text = re.sub(r'Читать далее.*', '', text)
+            text = re.sub(r'Источник:.*', '', text)
+            text = re.sub(r'Ссылка:.*', '', text)
             text = re.sub(r'https?://[^\s]+', '', text)
             text = re.sub(r'www\.[^\s]+', '', text)
             text = re.sub(r'[^\w\s.,!?\-]', ' ', text)
