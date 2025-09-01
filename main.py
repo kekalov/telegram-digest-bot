@@ -1119,7 +1119,8 @@ async def create_short_summary() -> str:
         text_lower = text.lower()
         mentioned_countries = [country for country in country_keywords if country in text_lower]
         
-        if mentioned_countries and len(text.strip()) > 10:
+        # Смягчаем фильтры: берем новости с упоминанием стран ИЛИ просто значимые новости
+        if (mentioned_countries or len(text.strip()) > 15) and len(text.strip()) > 10:
             countries_mentioned.update(mentioned_countries)
             
             # Фильтруем только значимые новости (исключаем описания фото, общие фразы)
