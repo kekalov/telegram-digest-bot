@@ -1153,7 +1153,9 @@ async def create_short_summary() -> str:
                 'не зафиксировано', 'не обнаружено', 'не выявлено',
                 'продолжает', 'остается', 'сохраняется',
                 'в рамках', 'в процессе', 'в ходе',
-                'через', 'посредством', 'с помощью'
+                'через', 'посредством', 'с помощью',
+                'об этом', 'рассказал', 'сообщил', 'заявил',
+                'тасс', 'риа', 'интерфакс', 'рбк', 'медуза'
             ]
             if any(phrase in text_lower for phrase in skip_phrases):
                 continue
@@ -1180,6 +1182,10 @@ async def create_short_summary() -> str:
         summary_content = re.sub(r'\.\.+', '.', summary_content)
         summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
         
+        # Убираем дублирование фраз (например, "850 тыс. 850 тыс.")
+        summary_content = re.sub(r'(\b\w+\s+\w+\s+\w+\s*\d+)\s+\1', r'\1', summary_content)
+        summary_content = re.sub(r'(\b\d+\s+\w+)\s+\1', r'\1', summary_content)
+        
         summary_text += summary_content + "\n\n"
     else:
         # Fallback: если нет фактов с упоминанием стран, берем любые значимые сообщения
@@ -1204,7 +1210,9 @@ async def create_short_summary() -> str:
                 'не зафиксировано', 'не обнаружено', 'не выявлено',
                 'продолжает', 'остается', 'сохраняется',
                 'в рамках', 'в процессе', 'в ходе',
-                'через', 'посредством', 'с помощью'
+                'через', 'посредством', 'с помощью',
+                'об этом', 'рассказал', 'сообщил', 'заявил',
+                'тасс', 'риа', 'интерфакс', 'рбк', 'медуза'
             ]
             
             if any(phrase in text_lower for phrase in skip_phrases):
@@ -1234,6 +1242,10 @@ async def create_short_summary() -> str:
             summary_content = ". ".join(fallback_facts)
             summary_content = re.sub(r'\.\.+', '.', summary_content)
             summary_content = re.sub(r'\.\s*\.', '. ', summary_content)
+            
+            # Убираем дублирование фраз
+            summary_content = re.sub(r'(\b\w+\s+\w+\s+\w+\s*\d+)\s+\1', r'\1', summary_content)
+            summary_content = re.sub(r'(\b\d+\s+\w+)\s+\1', r'\1', summary_content)
             summary_text += summary_content + "\n\n"
         else:
             # Если совсем нет фактов, добавляем общее резюме
