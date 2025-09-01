@@ -647,13 +647,14 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_text += f"\n"
     
     if monitored_channels:
-        status_text += f"✅ Отслеживаемые каналы:\n"
+        status_text += f"✅ Автоматически отслеживаемые каналы:\n"
         for i, channel in enumerate(monitored_channels, 1):
             message_count = len(message_store.messages.get(channel['id'], []))
             status_text += f"{i}. {channel['title']} ({message_count} сообщений)\n"
+        status_text += f"\n💡 Бот автоматически подписан на все {len(PREDEFINED_CHANNELS)} каналов при запуске"
     else:
         status_text += f"❌ Нет отслеживаемых каналов\n"
-        status_text += f"Используйте /manage_channels для добавления каналов\n"
+        status_text += f"Бот должен автоматически подписаться на каналы при запуске\n"
     
     await update.message.reply_text(status_text)
 
@@ -1395,6 +1396,15 @@ def main():
     
     # Обработчик callback'ов для кнопок (только для manage_channels)
     application.add_handler(CallbackQueryHandler(handle_callback))
+    
+    # Автоматически подписываемся на все предустановленные каналы
+    logger.info("Автоматически подписываемся на все предустановленные каналы...")
+    for channel_id, channel_info in PREDEFINED_CHANNELS.items():
+        message_store.channels[channel_id] = channel_info
+        message_store.add_channel(channel_id, channel_info)
+        logger.info(f"✅ Подписан на канал: {channel_info['title']} (@{channel_info['username']})")
+    
+    logger.info(f"Всего подписано на {len(PREDEFINED_CHANNELS)} каналов")
     
     # Запускаем планировщик в отдельном потоке
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
