@@ -715,7 +715,7 @@ async def digest_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def create_digest() -> str:
     """Создает сводку в стиле 'что происходит в мире' для человека, который только проснулся"""
-    # Получаем все сообщения без фильтрации по времени
+    # Получаем сообщения за последние 3 часа
     all_messages = []
     
     # Добавляем отладочную информацию
@@ -723,13 +723,15 @@ async def create_digest() -> str:
     logger.info(f"Все каналы с сообщениями: {list(message_store.messages.keys())}")
     logger.info(f"Всего каналов в хранилище: {len(message_store.channels)}")
     
+    # Получаем сообщения за последние 3 часа
+    recent_messages = message_store.get_messages_for_period(3)
+    
     # Проверяем все каналы в мониторинге
-    for channel_id in message_store.monitored_channels:
-        messages = message_store.messages.get(channel_id, [])
+    for channel_id, messages in recent_messages.items():
         channel_info = message_store.channels.get(channel_id, {})
         channel_title = channel_info.get('title', f'Channel {channel_id}')
         
-        logger.info(f"Канал {channel_id}: {len(messages)} сообщений")
+        logger.info(f"Канал {channel_id}: {len(messages)} сообщений за последние 3 часа")
         
         for msg in messages:
             all_messages.append({
@@ -738,15 +740,16 @@ async def create_digest() -> str:
                 'author': msg.get('from_user', 'Unknown')
             })
     
-    # Если сообщений нет, попробуем получить их по-другому
+    # Если сообщений за 3 часа нет, попробуем за 6 часов
     if not all_messages:
-        logger.info("Сообщений в мониторинге нет, пробуем все каналы")
-        # Попробуем получить все сообщения из всех каналов
-        for channel_id, messages in message_store.messages.items():
+        logger.info("Сообщений за 3 часа нет, пробуем за 6 часов")
+        recent_messages = message_store.get_messages_for_period(6)
+        
+        for channel_id, messages in recent_messages.items():
             channel_info = message_store.channels.get(channel_id, {})
             channel_title = channel_info.get('title', f'Channel {channel_id}')
             
-            logger.info(f"Канал {channel_id}: {len(messages)} сообщений")
+            logger.info(f"Канал {channel_id}: {len(messages)} сообщений за последние 6 часов")
             
             for msg in messages:
                 all_messages.append({
@@ -772,8 +775,8 @@ async def create_digest() -> str:
         if text and len(text) > 10:  # Минимальная длина
             all_texts.append(text)
     
-    # Создаем 10 новостей
-    digest_text += "📰 10 НОВОСТЕЙ:\n\n"
+    # Создаем 10 новостей за последние 3 часа
+    digest_text += "📰 10 НОВОСТЕЙ ЗА ПОСЛЕДНИЕ 3 ЧАСА:\n\n"
     
     # Берем больше уникальных сообщений для гарантии 10 новостей
     unique_messages = []
