@@ -241,8 +241,8 @@ async def scrape_channel_messages(channel_username: str) -> List[dict]:
         
         logger.info(f"Найдено {len(message_matches)} сообщений и {len(time_matches)} временных меток")
         
-        # Ограничиваем количество сообщений
-        max_messages = min(5, len(message_matches))
+        # Ограничиваем количество сообщений (увеличили с 5 до 15)
+        max_messages = min(15, len(message_matches))
         
         for i in range(max_messages):
             if i < len(message_matches):
