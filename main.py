@@ -926,6 +926,68 @@ async def create_digest() -> str:
     
     return digest_text
 
+def smart_summarize(text: str) -> str:
+    """Умно сокращает новость, сохраняя смысл"""
+    # Очищаем текст
+    text = text.strip()
+    
+    # Если текст короткий, возвращаем как есть
+    if len(text.split()) <= 10:
+        return text
+    
+    # Извлекаем ключевые элементы
+    words = text.split()
+    
+    # Ищем ключевые слова (субъект, действие, объект)
+    key_elements = []
+    
+    # Ищем имена собственные (с заглавной буквы)
+    proper_nouns = []
+    for word in words:
+        if word[0].isupper() and len(word) > 2:
+            proper_nouns.append(word)
+    
+    # Ищем глаголы (действия)
+    action_words = []
+    for word in words:
+        if any(ending in word.lower() for ending in ['ал', 'ил', 'ил', 'ет', 'ут', 'ат', 'ся']):
+            action_words.append(word)
+    
+    # Ищем числа и важные слова
+    important_words = []
+    for word in words:
+        if any(char.isdigit() for char in word) or word.lower() in ['миллиард', 'миллион', 'тысяч', 'доллар', 'рубль', 'евро']:
+            important_words.append(word)
+    
+    # Строим краткую версию
+    if proper_nouns and action_words:
+        # Берем первое имя собственное + глагол + важные слова
+        summary_parts = [proper_nouns[0]]
+        
+        # Добавляем глагол
+        if action_words:
+            summary_parts.append(action_words[0])
+        
+        # Добавляем важные слова (числа, валюты)
+        for word in important_words[:2]:
+            if word not in summary_parts:
+                summary_parts.append(word)
+        
+        # Добавляем контекст из середины текста
+        middle_words = words[len(words)//3:len(words)*2//3]
+        for word in middle_words[:3]:
+            if word not in summary_parts and len(word) > 3:
+                summary_parts.append(word)
+        
+        # Ограничиваем до 8-10 слов
+        if len(summary_parts) > 10:
+            summary_parts = summary_parts[:10]
+        
+        return ' '.join(summary_parts) + '.'
+    
+    # Fallback: берем первые 8 слов
+    return ' '.join(words[:8]) + '.'
+
 async def create_short_summary() -> str:
     """Создает короткую сводку 'ЧТО ПРОИСХОДИТ В МИРЕ?' на основе последних новостей"""
     all_messages = []
@@ -1099,35 +1161,8 @@ async def create_short_summary() -> str:
             if len(text.split()) < 3:
                 continue
             
-            # Сокращаем до ключевой информации, сохраняя смысл
-            words = text.split()
-            if len(words) > 15:
-                # Ищем последнюю точку в первых 15 словах
-                first_15_words = ' '.join(words[:15])
-                last_dot = first_15_words.rfind('.')
-                if last_dot > 0:
-                    fact = first_15_words[:last_dot + 1]
-                else:
-                    # Ищем естественное место для обрезания (конец предложения)
-                    # Берем первые 12 слов и ищем последний знак препинания
-                    first_12_words = ' '.join(words[:12])
-                    last_punctuation = max(
-                        first_12_words.rfind('.'),
-                        first_12_words.rfind('!'),
-                        first_12_words.rfind('?')
-                    )
-                    if last_punctuation > 0:
-                        fact = first_12_words[:last_punctuation + 1]
-                    else:
-                        # Если нет полных предложений, берем первые 10 слов
-                        # но только если это дает осмысленный результат
-                        fact = ' '.join(words[:10])
-                        if not fact.endswith(('.', '!', '?')):
-                            fact += '.'
-            else:
-                fact = text
-                if not fact.endswith(('.', '!', '?')):
-                    fact += '.'
+            # Умно сокращаем новость, сохраняя смысл
+            fact = smart_summarize(text)
             
             # Дополнительная очистка факта
             fact = fact.strip()
@@ -1163,26 +1198,7 @@ async def create_short_summary() -> str:
             text = re.sub(r'\s+', ' ', text)
             
             if len(text.strip()) > 10 and len(text.split()) >= 3:
-                words = text.split()
-                if len(words) > 12:
-                    # Ищем естественное место для обрезания
-                    first_12_words = ' '.join(words[:12])
-                    last_punctuation = max(
-                        first_12_words.rfind('.'),
-                        first_12_words.rfind('!'),
-                        first_12_words.rfind('?')
-                    )
-                    if last_punctuation > 0:
-                        fact = first_12_words[:last_punctuation + 1]
-                    else:
-                        # Если нет полных предложений, берем первые 10 слов
-                        fact = ' '.join(words[:10])
-                        if not fact.endswith(('.', '!', '?')):
-                            fact += '.'
-                else:
-                    fact = text
-                    if not fact.endswith(('.', '!', '?')):
-                        fact += '.'
+                fact = smart_summarize(text)
                 
                 fact = fact.strip()
                 if len(fact) > 8:
