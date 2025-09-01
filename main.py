@@ -425,14 +425,19 @@ async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    logger.info(f"manage_channels: создана клавиатура с {len(keyboard)} кнопками")
+    logger.info(f"manage_channels: callback_data для каналов: {[btn.callback_data for row in keyboard[:-1] for btn in row]}")
+    
     status_text = f"📋 Управление каналами для анализа\n\n"
     status_text += f"Отслеживается: {len(monitored_channels)} из {len(all_channels)} каналов\n\n"
     status_text += "Нажмите на канал, чтобы включить/выключить его анализ:"
     
     # Проверяем, откуда вызвана функция
     if update.callback_query:
+        logger.info("manage_channels: обновляем существующее сообщение")
         await update.callback_query.edit_message_text(status_text, reply_markup=reply_markup)
     else:
+        logger.info("manage_channels: отправляем новое сообщение")
         await update.message.reply_text(status_text, reply_markup=reply_markup)
 
 async def collect_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -468,7 +473,11 @@ async def collect_messages_command(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик нажатий на кнопки управления"""
+    logger.info("handle_callback: функция вызвана")
+    
     query = update.callback_query
+    logger.info(f"handle_callback: callback_query: {query}")
+    
     await query.answer()
     
     data = query.data
