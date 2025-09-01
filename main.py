@@ -916,7 +916,7 @@ async def create_digest() -> str:
     return digest_text
 
 def smart_summarize(text: str) -> str:
-    """Умно сокращает новость, сохраняя смысл - УПРОЩЕННАЯ ВЕРСИЯ"""
+    """Умно сокращает новость, сохраняя смысл - УЛУЧШЕННАЯ ВЕРСИЯ"""
     # Очищаем текст
     text = text.strip()
     
@@ -927,15 +927,20 @@ def smart_summarize(text: str) -> str:
             text += '.'
         return text
     
-    # Ищем полные предложения в тексте
+    # Ищем полные предложения в тексте (улучшенный алгоритм)
     sentences = []
-    current_sentence = ""
     
-    for word in text.split():
-        current_sentence += word + " "
-        if word.endswith(('.', '!', '?')):
-            sentences.append(current_sentence.strip())
-            current_sentence = ""
+    # Разбиваем по знакам препинания
+    parts = re.split(r'([.!?]+)', text)
+    
+    current_sentence = ""
+    for i in range(0, len(parts), 2):
+        if i < len(parts):
+            current_sentence += parts[i]
+            if i + 1 < len(parts):
+                current_sentence += parts[i + 1]
+                sentences.append(current_sentence.strip())
+                current_sentence = ""
     
     # Если есть остаток, добавляем его
     if current_sentence.strip():
@@ -944,12 +949,25 @@ def smart_summarize(text: str) -> str:
     # Если есть полные предложения, берем первое подходящее
     if sentences:
         for sentence in sentences:
-            if len(sentence.split()) <= 18:  # Увеличили лимит с 15 до 18
+            if len(sentence.split()) <= 20:  # Увеличили лимит до 20 слов
                 return sentence
     
-    # Если нет полных предложений, берем первые 15 слов и добавляем точку
-    words = text.split()[:15]
-    result = ' '.join(words)
+    # Если нет полных предложений, ищем естественное место для обрезания
+    words = text.split()
+    
+    # Ищем место где можно обрезать (после существительных, глаголов)
+    for i in range(min(20, len(words))):
+        word = words[i].lower()
+        # Если слово заканчивается на существительное или глагол, можно обрезать
+        if any(word.endswith(ending) for ending in ['ать', 'ить', 'еть', 'ать', 'ость', 'ние', 'ство']):
+            if i > 10:  # Минимум 10 слов
+                result = ' '.join(words[:i+1])
+                if not result.endswith(('.', '!', '?')):
+                    result += '.'
+                return result
+    
+    # Если ничего не подошло, берем первые 15 слов
+    result = ' '.join(words[:15])
     if not result.endswith(('.', '!', '?')):
         result += '.'
     return result
@@ -1115,13 +1133,22 @@ async def create_short_summary() -> str:
         text_lower = text.lower()
         mentioned_countries = [country for country in country_keywords if country in text_lower]
         
-        # КАРДИНАЛЬНО УПРОЩЕННЫЕ ФИЛЬТРЫ: берем ВСЕ новости длиннее 5 слов
-        if len(text.strip()) > 5:
+        # КАРДИНАЛЬНО УПРОЩЕННЫЕ ФИЛЬТРЫ: берем ВСЕ новости длиннее 3 слов
+        if len(text.strip()) > 3:
             countries_mentioned.update(mentioned_countries)
             
-            # Пропускаем ТОЛЬКО явные рекламные фразы
+            # Пропускаем больше мусорных фраз
             text_lower = text.lower()
-            if any(phrase in text_lower for phrase in ['подписаться на', 'подпишись на', 'читать далее']):
+            skip_phrases = [
+                'подписаться на', 'подпишись на', 'читать далее',
+                'источник:', 'ссылка:', 'фото:', 'изображение:', 
+                'картинка:', 'снимок:', 'видео:', 'ролик:',
+                'уважаемый господин', 'господин премьер', 'воспользуюсь вашей идеей',
+                'загрязнений не зафиксировано', 'не зафиксировано',
+                'продолжает дорожать вечером', 'дорожает вечером',
+                'в рамках', 'на фоне', 'через банки', 'внесли в'
+            ]
+            if any(phrase in text_lower for phrase in skip_phrases):
                 continue
             
             # Умно сокращаем новость, сохраняя смысл
@@ -1137,7 +1164,7 @@ async def create_short_summary() -> str:
     # Создаем резюме в стиле "кто что делает"
     if summary_facts:
         # Берем больше фактов для полноты картины
-        selected_facts = summary_facts[:8]
+        selected_facts = summary_facts[:12]
         
         # Объединяем в единый читаемый абзац с правильными переходами
         summary_content = ". ".join(selected_facts)
@@ -1158,7 +1185,11 @@ async def create_short_summary() -> str:
             skip_phrases = [
                 'подписаться на', 'подпишись на', 'читать далее', 
                 'источник:', 'ссылка:', 'фото:', 'изображение:', 
-                'картинка:', 'снимок:', 'видео:', 'ролик:'
+                'картинка:', 'снимок:', 'видео:', 'ролик:',
+                'уважаемый господин', 'господин премьер', 'воспользуюсь вашей идеей',
+                'загрязнений не зафиксировано', 'не зафиксировано',
+                'продолжает дорожать вечером', 'дорожает вечером',
+                'в рамках', 'на фоне', 'через банки', 'внесли в'
             ]
             
             if any(phrase in text_lower for phrase in skip_phrases):
@@ -1170,7 +1201,7 @@ async def create_short_summary() -> str:
             text = re.sub(r'[^\w\s.,!?\-]', ' ', text)
             text = re.sub(r'\s+', ' ', text)
             
-            if len(text.strip()) > 5:  # Снизили планку с 10 до 5 слов
+            if len(text.strip()) > 3:  # Снизили планку с 5 до 3 слов
                 fact = smart_summarize(text)
                 
                 # Если функция вернула None, пропускаем эту новость
