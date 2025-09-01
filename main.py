@@ -1120,8 +1120,9 @@ async def create_short_summary() -> str:
                     if last_punctuation > 0:
                         fact = first_12_words[:last_punctuation + 1]
                     else:
-                        # Если нет знаков препинания, берем первые 10 слов
-                        fact = ' '.join(words[:10])
+                        # Если нет знаков препинания, берем только первые 8 слов
+                        # чтобы гарантированно не обрезать предложение посередине
+                        fact = ' '.join(words[:8])
                         if not fact.endswith(('.', '!', '?')):
                             fact += '.'
             else:
@@ -1176,8 +1177,9 @@ async def create_short_summary() -> str:
                     if last_punctuation > 0:
                         fact = first_12_words[:last_punctuation + 1]
                     else:
-                        # Если нет знаков препинания, берем первые 10 слов
-                        fact = ' '.join(words[:10])
+                        # Если нет знаков препинания, берем только первые 8 слов
+                        # чтобы гарантированно не обрезать предложение посередине
+                        fact = ' '.join(words[:8])
                         if not fact.endswith(('.', '!', '?')):
                             fact += '.'
                 else:
