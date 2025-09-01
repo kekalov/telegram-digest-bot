@@ -932,61 +932,37 @@ def smart_summarize(text: str) -> str:
     text = text.strip()
     
     # Если текст короткий, возвращаем как есть
-    if len(text.split()) <= 10:
+    if len(text.split()) <= 12:
         return text
     
-    # Извлекаем ключевые элементы
+    # Ищем полные предложения в тексте
+    sentences = []
+    current_sentence = ""
+    
+    for word in text.split():
+        current_sentence += word + " "
+        if word.endswith(('.', '!', '?')):
+            sentences.append(current_sentence.strip())
+            current_sentence = ""
+    
+    # Если есть остаток, добавляем его
+    if current_sentence.strip():
+        sentences.append(current_sentence.strip())
+    
+    # Если есть полные предложения, берем первое
+    if sentences:
+        first_sentence = sentences[0]
+        if len(first_sentence.split()) <= 15:
+            return first_sentence
+        else:
+            # Если первое предложение длинное, ищем более короткое
+            for sentence in sentences:
+                if len(sentence.split()) <= 12:
+                    return sentence
+    
+    # Если нет полных предложений или все длинные, берем первые 12 слов
     words = text.split()
-    
-    # Ищем ключевые слова (субъект, действие, объект)
-    key_elements = []
-    
-    # Ищем имена собственные (с заглавной буквы)
-    proper_nouns = []
-    for word in words:
-        if word[0].isupper() and len(word) > 2:
-            proper_nouns.append(word)
-    
-    # Ищем глаголы (действия)
-    action_words = []
-    for word in words:
-        if any(ending in word.lower() for ending in ['ал', 'ил', 'ил', 'ет', 'ут', 'ат', 'ся']):
-            action_words.append(word)
-    
-    # Ищем числа и важные слова
-    important_words = []
-    for word in words:
-        if any(char.isdigit() for char in word) or word.lower() in ['миллиард', 'миллион', 'тысяч', 'доллар', 'рубль', 'евро']:
-            important_words.append(word)
-    
-    # Строим краткую версию
-    if proper_nouns and action_words:
-        # Берем первое имя собственное + глагол + важные слова
-        summary_parts = [proper_nouns[0]]
-        
-        # Добавляем глагол
-        if action_words:
-            summary_parts.append(action_words[0])
-        
-        # Добавляем важные слова (числа, валюты)
-        for word in important_words[:2]:
-            if word not in summary_parts:
-                summary_parts.append(word)
-        
-        # Добавляем контекст из середины текста
-        middle_words = words[len(words)//3:len(words)*2//3]
-        for word in middle_words[:3]:
-            if word not in summary_parts and len(word) > 3:
-                summary_parts.append(word)
-        
-        # Ограничиваем до 8-10 слов
-        if len(summary_parts) > 10:
-            summary_parts = summary_parts[:10]
-        
-        return ' '.join(summary_parts) + '.'
-    
-    # Fallback: берем первые 8 слов
-    return ' '.join(words[:8]) + '.'
+    return ' '.join(words[:12]) + '.'
 
 async def create_short_summary() -> str:
     """Создает короткую сводку 'ЧТО ПРОИСХОДИТ В МИРЕ?' на основе последних новостей"""
