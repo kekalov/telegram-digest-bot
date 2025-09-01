@@ -960,9 +960,25 @@ def smart_summarize(text: str) -> str:
                 if len(sentence.split()) <= 12:
                     return sentence
     
-    # Если нет полных предложений или все длинные, берем первые 12 слов
+    # Если нет полных предложений или все длинные, берем первые 10 слов
+    # но только если это дает осмысленный результат
     words = text.split()
-    return ' '.join(words[:12]) + '.'
+    if len(words) > 10:
+        # Ищем последний знак препинания в первых 10 словах
+        first_10_words = ' '.join(words[:10])
+        last_punctuation = max(
+            first_10_words.rfind('.'),
+            first_10_words.rfind('!'),
+            first_10_words.rfind('?'),
+            first_10_words.rfind(',')
+        )
+        if last_punctuation > 0:
+            return first_10_words[:last_punctuation + 1]
+        else:
+            # Если нет знаков препинания, берем первые 8 слов
+            return ' '.join(words[:8]) + '.'
+    else:
+        return text
 
 async def create_short_summary() -> str:
     """Создает короткую сводку 'ЧТО ПРОИСХОДИТ В МИРЕ?' на основе последних новостей"""
