@@ -793,13 +793,18 @@ async def create_digest() -> str:
     
     # Формируем список новостей в неформальном стиле
     used_channels = set()  # Для отслеживания использованных каналов
+    total_available_channels = len(set(msg['channel'] for msg in all_messages))
+    max_per_channel = max(1, 10 // total_available_channels) if total_available_channels > 0 else 1
     
     for i, msg_data in enumerate(unique_messages, 1):
         text = msg_data['text']
         channel = msg_data['channel']
         
-        # Пропускаем, если канал уже использован (для разнообразия источников)
-        if channel in used_channels and len(used_channels) < len(set(msg['channel'] for msg in all_messages)):
+        # Считаем, сколько раз уже использовали этот канал
+        channel_count = sum(1 for ch in used_channels if ch == channel)
+        
+        # Пропускаем, если канал уже использован максимальное количество раз
+        if channel_count >= max_per_channel and len(used_channels) < total_available_channels:
             continue
             
         used_channels.add(channel)
