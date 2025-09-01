@@ -1084,6 +1084,18 @@ async def create_short_summary() -> str:
         if mentioned_countries and len(text.strip()) > 10:
             countries_mentioned.update(mentioned_countries)
             
+            # Фильтруем только значимые новости (исключаем описания фото, общие фразы)
+            text_lower = text.lower()
+            
+            # Пропускаем описания фото и неинформативные сообщения
+            skip_phrases = ['автомобиль', 'фото', 'изображение', 'картинка', 'снимок', 'видео', 'ролик']
+            if any(phrase in text_lower for phrase in skip_phrases):
+                continue
+            
+            # Пропускаем слишком короткие или неинформативные сообщения
+            if len(text.split()) < 5:
+                continue
+            
             # Сокращаем до ключевой информации (первые 12-15 слов)
             words = text.split()
             if len(words) > 15:
@@ -1101,7 +1113,7 @@ async def create_short_summary() -> str:
             
             # Дополнительная очистка факта
             fact = fact.strip()
-            if len(fact) < 10:  # Слишком короткие факты пропускаем
+            if len(fact) < 15:  # Слишком короткие факты пропускаем
                 continue
             
             if len(fact) > 8:  # Только если есть смысл
@@ -1117,9 +1129,6 @@ async def create_short_summary() -> str:
         
         # Убираем двойные точки
         summary_content = re.sub(r'\.\.+', '.', summary_content)
-        
-        # Добавляем общий вывод
-        summary_content += " Мир адаптируется к новым геополитическим реалиям."
         
         summary_text += summary_content + "\n\n"
     else:
