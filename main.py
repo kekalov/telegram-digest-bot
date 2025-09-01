@@ -381,6 +381,8 @@ async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /manage_channels - показывает интерфейс управления каналами"""
     user_id = update.effective_user.id
     
+    logger.info(f"manage_channels вызвана пользователем {user_id}")
+    
     # Добавляем предустановленные каналы в хранилище
     for channel_id, channel_info in PREDEFINED_CHANNELS.items():
         message_store.channels[channel_id] = channel_info
@@ -388,6 +390,8 @@ async def manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_channels = message_store.get_all_channels()
     monitored_channels = message_store.get_monitored_channels()
     monitored_ids = {channel['id'] for channel in monitored_channels}
+    
+    logger.info(f"manage_channels: всего каналов {len(all_channels)}, отслеживаемых {len(monitored_channels)}")
     
     if not all_channels:
         await update.message.reply_text(
@@ -469,6 +473,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     data = query.data
     user_id = update.effective_user.id
+    
+    logger.info(f"handle_callback: получен callback {data} от пользователя {user_id}")
     
     # Обработка каналов
     if data.startswith("toggle_channel:"):
